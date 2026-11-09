@@ -182,6 +182,30 @@ button{cursor:pointer}
 .fbh{font-size:14px;font-weight:500;color:var(--muted)}
 .tfb{border:2px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
 .tfb b{color:var(--accent)}
+.waitbox{display:flex;flex-direction:column;gap:6px;background:var(--accent-soft);border-radius:14px;padding:16px;font-size:16px}
+.waitbox b{font-size:19px}
+.pracbox{display:flex;flex-direction:column;gap:10px;border:2px solid var(--accent);border-radius:14px;padding:14px}
+.steps2{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px;font-size:16px}
+.steps2 li{color:var(--muted)}
+.steps2 li.now{color:var(--ink);font-weight:700}
+.steps2 li.done{color:var(--ok)}
+.steps2 li.done::marker{content:"✓  "}
+.btn.live{background:var(--accent);border-color:var(--accent)}
+.ptsline{font-family:var(--f-display);font-weight:400;font-size:24px;color:var(--ink)}
+.limrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rankp{display:flex;flex-direction:column;gap:12px}
+.podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:end}
+.pod{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;min-width:0}
+.pname{font-weight:700;font-size:16px;overflow-wrap:anywhere}
+.ppts{font-family:var(--f-mono);font-weight:600;font-size:18px}
+.pmeta{font-size:12px;color:var(--muted)}
+.pbar{width:100%;border-radius:10px 10px 0 0;display:grid;place-items:center;font-family:var(--f-display);font-size:30px;color:var(--surface)}
+.p1 .pbar{height:96px;background:var(--accent)} .p2 .pbar{height:70px;background:var(--muted)} .p3 .pbar{height:52px;background:var(--line);color:var(--ink)}
+.pod.empty .pbar{opacity:.35}
+.rest{margin:0;padding-left:28px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.rest li span{display:inline-block;min-width:0}
+.rest li span.mono{font-family:var(--f-mono);margin-left:8px;color:var(--muted)}
+.muted{color:var(--muted);margin:0}
 .sel2{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:0 10px;font-weight:700}
 #modal{position:fixed;inset:0;z-index:30;background:color-mix(in srgb,var(--ink) 55%,transparent);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 #modal .box{background:var(--surface);border-radius:18px;padding:20px;width:min(1200px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px}
@@ -234,7 +258,9 @@ button{cursor:pointer}
           <button class="btn" id="bReveal" type="button">정답 공개</button>
           <button class="btn alt" id="bPrev" type="button">← 이전 문제</button>
           <button class="btn alt" id="bNext" type="button">다음 문제 →</button>
+          <button class="btn alt" id="bOpen" type="button" hidden>학생 화면에 열기</button>
         </div>
+        <div class="sent" id="bOpenSt" aria-live="polite"></div>
         <div class="reveal" id="bAns" hidden>
           <span class="eyebrow">정답</span>
           <div class="given" id="bAnsF"></div>
@@ -245,6 +271,7 @@ button{cursor:pointer}
         <div class="panel" style="display:flex;flex-direction:column;gap:12px">
           <span class="eyebrow">경과 시간</span>
           <div class="timer" id="tDisp">0:00</div>
+          <div class="limrow"><label class="eyebrow" for="bLimit">이 문제 제한 시간</label><select class="sel2" id="bLimit"></select></div>
           <div class="brow">
             <button class="btn" id="tGo" type="button">시작</button>
             <button class="btn alt" id="tReset" type="button">처음부터</button>
@@ -258,9 +285,14 @@ button{cursor:pointer}
           <div class="score" id="scores"></div>
           <button class="ghost" id="sReset" type="button">점수 초기화</button>
         </div>
-        <div class="panel" id="lbPanel" hidden style="display:flex;flex-direction:column;gap:10px">
-          <span class="eyebrow">개인 정답 순위 · 이번 수업</span>
-          <div class="otable"><table><thead><tr><th>순위</th><th>학생</th><th>맞힌 문제</th><th>마지막 정답</th></tr></thead><tbody id="lbBody"></tbody></table></div>
+        <div class="panel rankp" id="qrPanel">
+          <span class="eyebrow" id="qrTitle">이번 문제 순위</span>
+          <div id="qrBody"></div>
+        </div>
+        <div class="panel rankp" id="totPanel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="eyebrow">종합 순위 · 이번 수업</span><button class="ghost" id="totToggle" type="button">종합 순위 공개</button></div>
+          <div id="totBody"></div>
+          <div class="fbh">점수 = 속도 점수(500~1000점) × 시도 배율(첫 시도 1.0 · 둘째 0.7 · 셋째 0.5 · 그 뒤 0.3)</div>
         </div>
       </div>
       <div class="panel gallery">
@@ -275,7 +307,7 @@ button{cursor:pointer}
         <div class="cards" id="cards"></div>
         <div class="order">
           <h4>제출 순서 <span id="oQ"></span></h4>
-          <div class="otable"><table><thead><tr><th>순서</th><th>제출자</th><th>제출 시각</th><th>결과</th><th>정답 순위</th><th>걸린 시간</th><th>교사 피드백</th></tr></thead><tbody id="oBody"></tbody></table></div>
+          <div class="otable"><table><thead><tr><th>순서</th><th>제출자</th><th>제출 시각</th><th>결과</th><th>시도</th><th>점수</th><th>걸린 시간</th><th>교사 피드백</th></tr></thead><tbody id="oBody"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -285,9 +317,21 @@ button{cursor:pointer}
     <div class="group">
       <div class="panel gq">
         <div class="grpsel"><label for="cls" class="eyebrow">학급</label><select id="cls"></select><label for="grp" class="eyebrow">모둠</label><select id="grp"></select></div>
-        <div class="codebox">
+        <div class="codebox" id="pickBox">
           <div class="eyebrow">전자칠판에 나온 문제 번호를 누르세요</div>
           <div class="keypad" id="qPick"></div>
+        </div>
+        <div class="waitbox" id="waitBox" hidden>
+          <div class="eyebrow">문제 대기 중</div>
+          <b>선생님이 문제를 열면 자동으로 시작돼요.</b>
+          <span>기다리는 동안 조작 연습을 해 보세요.</span>
+        </div>
+        <button class="ghost" id="pracStart" type="button" hidden>조작 연습하기</button>
+        <div class="pracbox" id="pracBox" hidden>
+          <div class="eyebrow" id="pracTitle"></div>
+          <ol class="steps2" id="pracSteps"></ol>
+          <div class="sent" id="pracMsg" aria-live="polite"></div>
+          <div class="brow"><button class="ghost" id="pracSkip" type="button">연습 그만하기</button></div>
         </div>
         <div class="gq" id="qView" hidden>
           <div class="qno" id="gNo"></div>
@@ -361,13 +405,38 @@ function mkGraph(atoms,bonds){
   const g=atoms.map(a=>({el:a.el,nb:[],sum:0}));
   bonds.forEach(b=>{g[b.a].nb.push({j:b.b,o:b.o});g[b.b].nb.push({j:b.a,o:b.o});g[b.a].sum+=b.o;g[b.b].sum+=b.o});
   g.forEach(x=>x.h=VAL[x.el]-x.sum);
+  markAromatic(g);
   return g;
 }
+/* 탄소 6개 고리에서 단일·이중 결합이 번갈아 있으면 벤젠 고리로 봅니다. 이중 결합 위치가 달라도 같은 물질로 판별됩니다. */
+function markAromatic(g){
+  g.rings=[];
+  const bo=(i,j)=>{const n=g[i].nb.find(n=>n.j===j);return n?n.o:0};
+  const seen=new Set();
+  g.forEach((a,s)=>{
+    if(a.el!=='C')return;
+    const path=[s];
+    const dfs=()=>{
+      const cur=path[path.length-1];
+      if(path.length===6){
+        if(bo(cur,s)){const cyc=path.slice(),key=cyc.slice().sort((x,y)=>x-y).join(',');
+          if(!seen.has(key)){const os=cyc.map((x,k)=>bo(x,cyc[(k+1)%6]));
+            if(os.every((o,k)=>o!==os[(k+1)%6]&&(o===1||o===2))){seen.add(key);g.rings.push(cyc)}}}
+        return;
+      }
+      for(const n of g[cur].nb){if(g[n.j].el!=='C'||path.includes(n.j)||(n.o!==1&&n.o!==2))continue;path.push(n.j);dfs();path.pop()}
+    };
+    dfs();
+  });
+  g.rings.forEach(cyc=>cyc.forEach((x,k)=>{const y=cyc[(k+1)%6];g[x].ar=true;
+    g[x].nb.forEach(n=>{if(n.j===y)n.o=1.5});g[y].nb.forEach(n=>{if(n.j===x)n.o=1.5})}));
+}
 function parseS(s){
-  const atoms=[],bonds=[],st=[];let prev=-1,ord=1;
+  const atoms=[],bonds=[],st=[],ring={};let prev=-1,ord=1;
   for(const ch of s){
     if(ch==='(')st.push(prev);else if(ch===')')prev=st.pop();
     else if(ch==='=')ord=2;else if(ch==='#')ord=3;
+    else if(ch>='0'&&ch<='9'){if(ring[ch]){bonds.push({a:ring[ch].i,b:prev,o:ord!==1?ord:ring[ch].o});delete ring[ch]}else ring[ch]={i:prev,o:ord};ord=1}
     else{const i=atoms.length;atoms.push({el:ch});if(prev>=0)bonds.push({a:prev,b:i,o:ord});prev=i;ord=1}
   }
   return mkGraph(atoms,bonds);
@@ -419,13 +488,30 @@ window.addEventListener('hashchange',route);
 /* ===== 전자칠판 ===== */
 const B={cls:store.get('bc','1반'),q:store.get('bq',0),groups:store.get('bg',6),scores:store.get('bs',[0,0,0,0,0,0,0,0]),reveal:false,run:false,acc:0,t0:0};
 function chipRow(el,cur,fn){el.innerHTML='';QS.forEach((_,i)=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=i+1;b.setAttribute('aria-pressed',i===cur);b.onclick=()=>fn(i);el.appendChild(b)})}
-function setBQ(i){B.q=Math.max(0,Math.min(QS.length-1,i));B.reveal=false;store.set('bq',B.q);resetTimer();renderBoard()}
+function setBQ(i){B.q=Math.max(0,Math.min(QS.length-1,i));B.reveal=false;store.set('bq',B.q);resetTimer();renderBoard();if(B.open)pushState()}
+/* 학생 화면에 문제 열기·닫기 (시트 연동 시) */
+B.open=false;B.showTot=false;B.limits=store.get('blim',{});
+const limitOf=qi=>Number(B.limits[qi])||defaultLimit(qi);
+async function pushState(){
+  if(!SHEET_API)return;const st=$('bOpenSt');
+  try{const j=await (await fetch(SHEET_API,{method:'POST',body:JSON.stringify({action:'state',cls:B.cls,q:B.open?B.q+1:0,limit:limitOf(B.q)})})).json();
+    if(!j.ok){st.className='sent bad';st.textContent='학생 화면에 전달하지 못했어요. 다시 눌러 주세요.';return}}
+  catch(e){st.className='sent bad';st.textContent='인터넷 연결을 확인하세요.';return}
+  renderOpen();
+}
+function renderOpen(){
+  const b=$('bOpen'),st=$('bOpenSt');if(!b)return;
+  b.hidden=!SHEET_API;b.textContent=B.open?'학생 화면 닫기':'학생 화면에 열기';b.classList.toggle('live',B.open);
+  st.className='sent'+(B.open?' ok':'');st.textContent=SHEET_API?(B.open?`${B.cls} 학생 화면에 Q${B.q+1}이(가) 열려 있어요. 문제를 넘기면 학생 화면도 함께 넘어가요.`:`${B.cls} 학생 화면은 닫혀 있어요. 학생들은 조작 연습을 할 수 있어요.`):'';
+}
 function renderBoard(){
   const q=QS[B.q];chipRow($('bChips'),B.q,setBQ);
   $('bNo').textContent='Q'+(B.q+1);$('bTag').textContent=q.tag;$('bTitle').textContent=q.title;
   $('bGiven').textContent=q.given;$('bBody').textContent=q.body;
   $('bAns').hidden=!B.reveal;$('bAnsF').textContent=q.reveal;$('bAnsN').textContent=q.note||'';
   $('bReveal').textContent=B.reveal?'정답 숨기기':'정답 공개';
+  if(typeof renderOpen==='function')renderOpen();
+  const bl=$('bLimit');if(bl){if(!bl.options.length)[60,90,120,180,240,300].forEach(v=>bl.insertAdjacentHTML('beforeend',`<option value="${v}">${v%60?(v/60).toFixed(1):v/60}분</option>`));bl.value=String(limitOf(B.q))}
   const gc=$('gCount');gc.innerHTML='';[4,5,6,7,8].forEach(n=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=n;b.setAttribute('aria-pressed',n===B.groups);b.setAttribute('aria-label','모둠 '+n+'개');b.onclick=()=>{B.groups=n;store.set('bg',n);renderBoard()};gc.appendChild(b)});
   const sc=$('scores');sc.innerHTML='';
   for(let g=0;g<B.groups;g++){
@@ -434,6 +520,9 @@ function renderBoard(){
   sc.querySelectorAll('.sbtn').forEach(b=>b.onclick=()=>{const g=+b.dataset.g;B.scores[g]=Math.max(0,B.scores[g]+ +b.dataset.d);store.set('bs',B.scores);renderBoard()});
   renderGallery();
 }
+$('bLimit').onchange=()=>{B.limits[B.q]=Number($('bLimit').value);store.set('blim',B.limits);if(B.open)pushState();renderBoard()};
+$('totToggle').onclick=()=>{B.showTot=!B.showTot;renderGallery()};
+$('bOpen').onclick=()=>{B.open=!B.open;pushState();renderOpen()};
 $('bReveal').onclick=()=>{B.reveal=!B.reveal;if(B.reveal&&B.run)toggleTimer();renderBoard()};
 $('bPrev').onclick=()=>setBQ(B.q-1);$('bNext').onclick=()=>setBQ(B.q+1);
 function elapsed(){return B.acc+(B.run?Date.now()-B.t0:0)}
@@ -480,7 +569,7 @@ function structSVG(st,inline){
 }
 const bCls=$('bCls');CLASSES.forEach(c=>bCls.insertAdjacentHTML('beforeend',`<option>${c}</option>`));bCls.value=B.cls;
 const G={rows:[],since:store.get('since',(()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})()),awarded:new Set(store.get('aw',[])),last:0,err:false,busy:false};
-bCls.onchange=()=>{B.cls=bCls.value;store.set('bc',B.cls);G.rows=[];renderGallery();poll()};
+bCls.onchange=()=>{if(B.open){B.open=false;pushState()}B.cls=bCls.value;store.set('bc',B.cls);G.rows=[];renderGallery();renderOpen();poll()};
 async function poll(){
   if(!SHEET_API||$('board').hidden||document.hidden||G.busy)return;G.busy=true;
   try{
@@ -490,7 +579,7 @@ async function poll(){
   }catch(e){G.err=true;renderSync()}
   G.busy=false;
 }
-function award(){
+function award(){return false;
   let ch=false;
   G.rows.forEach(r=>{if(!r.ok||r.name||r.grp<1||r.grp>8)return;const k=r.cls+'|'+r.q+'|'+r.grp;if(G.awarded.has(k))return;G.awarded.add(k);B.scores[r.grp-1]++;ch=true});
   if(ch){store.set('aw',[...G.awarded]);store.set('bs',B.scores);renderBoard()}
@@ -503,32 +592,52 @@ function renderSync(){
   s.className='sync on';s.textContent=G.last?'시트 연결됨 · '+Math.round((Date.now()-G.last)/1000)+'초 전 갱신':'시트 연결 중…';
 }
 function rowsFor(g,q){return G.rows.filter(r=>!r.name&&r.grp===g&&r.q===q).sort((a,b)=>a.t-b.t)}
-const whoOf=r=>r.name?`${r.cls} ${r.grp}번 ${r.name}`:`${r.grp}모둠`;
+const whoOf=r=>r.name?(r.grp?`${r.cls} ${r.grp}번 ${r.name}`:`${r.cls} ${r.name}`):`${r.grp}모둠`;
 function clock(t){const d=new Date(t),p=n=>String(n).padStart(2,'0');return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3,'0')}`}
+function scoredFirsts(){
+  const byQ=new Map(),tries=new Map();
+  G.rows.slice().sort((a,b)=>a.t-b.t).forEach(r=>{
+    const k=keyOf(r)+'#'+r.q,n=(tries.get(k)||0)+1;tries.set(k,n);r._att=r.attempt||n;
+    if(!r.ok)return;if(!byQ.has(r.q))byQ.set(r.q,new Map());const m=byQ.get(r.q);if(m.has(keyOf(r)))return;
+    r._pts=r.points!=null?r.points:pointsOf(r.sec,r.limit||limitOf(r.q-1),r._att);
+    m.set(keyOf(r),{who:r.name||(r.grp+'모둠'),pts:r._pts,att:r._att,sec:r.sec,t:r.t});
+  });
+  return byQ;
+}
 function renderOrder(q){
   const body=$('oBody');if(!body)return;$('oQ').textContent='· Q'+q;
+  const byQ=scoredFirsts(),cur=byQ.get(q)||new Map();
   const rs=G.rows.filter(r=>r.q===q).sort((a,b)=>a.t-b.t);
-  if(!rs.length){body.innerHTML='<tr class="empty-row"><td colspan="7">아직 제출이 없습니다</td></tr>';return}
-  const seen=new Set();let rank=0;
+  if(!rs.length){body.innerHTML='<tr class="empty-row"><td colspan="8">아직 제출이 없습니다</td></tr>';return}
+  const best=[...cur.values()].sort((a,b)=>b.pts-a.pts||a.t-b.t)[0];
   body.innerHTML=rs.map((r,i)=>{
-    const key=r.cls+'|'+r.grp+'|'+(r.name||'');let rk='';
-    if(r.ok&&!seen.has(key)){seen.add(key);rank++;rk=rank+'위'}
-    return `<tr class="${rk==='1위'?'first':''}"><td class="mono">${i+1}</td><td><button type="button" class="linkbtn" data-t="${r.t}">${esc(whoOf(r))}</button></td><td class="mono">${clock(r.t)}</td><td>${r.ok?'정답':'오답'}</td><td>${rk}</td><td class="mono">${r.sec}초</td><td>${r.tfb?'보냄 ✓':(r.ok?'':'<span style="color:var(--muted)">자동</span>')}</td></tr>`;
+    const e=cur.get(keyOf(r)),isFirst=e&&e.t===r.t;
+    return `<tr class="${isFirst&&best&&best.t===r.t?'first':''}"><td class="mono">${i+1}</td><td><button type="button" class="linkbtn" data-t="${r.t}">${esc(whoOf(r))}</button></td><td class="mono">${clock(r.t)}</td><td>${r.ok?'정답':'오답'}</td><td class="mono">${r._att}</td><td class="mono">${isFirst?e.pts+'점':''}</td><td class="mono">${r.sec}초</td><td>${r.tfb?'보냄 ✓':(r.ok?'':'<span style="color:var(--muted)">자동</span>')}</td></tr>`;
   }).join('');
   body.querySelectorAll('.linkbtn').forEach(b=>b.onclick=()=>{const r=G.rows.find(x=>String(x.t)===b.dataset.t);if(r)openSub(keyOf(r),r.q,r.t)});
 }
-function renderLeaderboard(){
-  const body=$('lbBody');if(!body)return;
-  const m=new Map();
-  G.rows.filter(r=>r.name).sort((a,b)=>a.t-b.t).forEach(r=>{const k=keyOf(r);if(!m.has(k))m.set(k,{r,qs:new Set(),last:0});const e=m.get(k);if(r.ok&&!e.qs.has(r.q)){e.qs.add(r.q);e.last=r.t}});
-  const list=[...m.values()].filter(e=>e.qs.size).sort((a,b)=>b.qs.size-a.qs.size||a.last-b.last);
-  body.innerHTML=list.length?list.slice(0,40).map((e,i)=>`<tr class="${i===0?'first':''}"><td class="mono">${i+1}</td><td>${esc(e.r.grp+'번 '+e.r.name)}</td><td class="mono">${e.qs.size}문제</td><td class="mono">${clock(e.last).slice(0,8)}</td></tr>`).join(''):'<tr class="empty-row"><td colspan="4">아직 정답이 없습니다</td></tr>';
+function podium(list){
+  const top=[list[1],list[0],list[2]];
+  return `<div class="podium">${top.map((e,i)=>{const p=[2,1,3][i];return e?`<div class="pod p${p}"><span class="pname">${esc(e.who)}</span><span class="ppts">${e.pts}점</span><span class="pmeta">${esc(e.meta)}</span><div class="pbar">${p}</div></div>`:`<div class="pod p${p} empty"><div class="pbar">${p}</div></div>`}).join('')}</div>`+
+    (list.length>3?`<ol class="rest" start="4">${list.slice(3,15).map(e=>`<li><span>${esc(e.who)}</span><span class="mono">${e.pts}점 · ${esc(e.meta)}</span></li>`).join('')}</ol>`:'');
+}
+function renderRankings(q){
+  const byQ=scoredFirsts();
+  const cur=[...(byQ.get(q)||new Map()).values()].sort((a,b)=>b.pts-a.pts||a.t-b.t).map(e=>({...e,meta:`${e.sec}초 · ${e.att===1?'첫 시도':e.att+'번째 시도'}`}));
+  $('qrTitle').textContent=`이번 문제 순위 · ${B.cls} Q${q}`;
+  $('qrBody').innerHTML=cur.length?podium(cur):'<p class="muted">아직 정답이 없습니다.</p>';
+  const tot=new Map();
+  byQ.forEach(m=>m.forEach((e,k)=>{const x=tot.get(k)||{who:e.who,pts:0,n:0,first:0,last:0};x.pts+=e.pts;x.n++;if(e.att===1)x.first++;x.last=Math.max(x.last,e.t);tot.set(k,x)}));
+  const tl=[...tot.values()].sort((a,b)=>b.pts-a.pts||a.last-b.last).map(e=>({...e,meta:`${e.n}문제 · 첫 시도 ${e.first}개`}));
+  $('totToggle').textContent=B.showTot?'종합 순위 숨기기':'종합 순위 공개';
+  $('totBody').innerHTML=!B.showTot?'<p class="muted">정리 단계에서 공개하세요.</p>':(tl.length?podium(tl):'<p class="muted">아직 정답이 없습니다.</p>');
 }
 function renderGallery(){
   const el=$('cards');if(!el)return;const q=B.q+1;$('gQlabel').textContent='· '+B.cls+' · Q'+q;
   const grpMode=GROUP_CLASSES.includes(B.cls);
-  el.hidden=!grpMode;$('scorePanel').hidden=!grpMode;$('lbPanel').hidden=grpMode;
-  if(!grpMode){renderOrder(q);renderLeaderboard();renderSync();return}
+  el.hidden=!grpMode;$('scorePanel').hidden=true;
+  renderRankings(q);
+  if(!grpMode){renderOrder(q);renderSync();return}
   let h='';
   for(let g=1;g<=B.groups;g++){
     const rs=rowsFor(g,q),last=rs[rs.length-1];
@@ -598,7 +707,7 @@ clsSel.value=S.cls;clsSel.onchange=()=>{S.cls=clsSel.value;store.set('gc',S.cls)
 
 function snap(){S.hist.push({atoms:[...S.atoms.values()].map(a=>({...a})),bonds:S.bonds.map(b=>({...b}))});if(S.hist.length>80)S.hist.shift()}
 function undo(){const h=S.hist.pop();if(!h)return;S.atoms=new Map(h.atoms.map(a=>[a.id,a]));S.bonds=h.bonds;changed()}
-function setGQ(i){setSent('','');S.tries=0;S.hl=null;S.lastT=0;S.tfbShown='';renderTeacherFb();S.q=i;S.result=null;S.qStart=Date.now();clearAll(false);renderGroupQ();renderGrid()}
+function setGQ(i){setSent('','');S.tries=0;S.hl=null;S.lastT=0;S.tfbShown='';renderTeacherFb();S.q=i;S.att=0;S.result=null;S.qStart=Date.now();clearAll(false);renderGroupQ();renderGrid()}
 
 function renderGroupQ(){
   const locked=S.q==null;
@@ -608,10 +717,11 @@ function renderGroupQ(){
     if(i===S.q){b.style.background='var(--accent)';b.style.color='var(--surface)';b.style.borderColor='var(--accent)'}
     b.onclick=()=>{if(i!==S.q)setGQ(i)};qp.appendChild(b)});
   if(!locked)$('gNo').textContent='Q'+(S.q+1);
+  if(typeof renderSide==='function')renderSide();
   const r=$('gResult');
   if(!S.result){r.innerHTML='';return}
   r.innerHTML=S.result.ok
-    ?`<div class="result ok pop"><span class="big">정답!</span><span>${S.group}모둠 · ${S.result.sec}초</span><small>${QS[S.q].note||''}</small></div>`
+    ?`<div class="result ok pop"><span class="big">정답!</span><span>${S.group}모둠 · ${S.result.sec}초</span>${ptsHTML()}<small>${QS[S.q].note||''}</small></div>`
     :`<div class="result bad pop"><span class="big">다시 도전</span>${S.result.head?`<small>${esc(S.result.head)}</small>`:''}${S.result.html||`<small>${esc(S.result.msg)}</small>`}</div>`;
 }
 
@@ -679,7 +789,7 @@ function renderGrid(){
 }
 let toastT=null;
 function toast(m){$('toast').textContent=m;clearTimeout(toastT);toastT=setTimeout(()=>$('toast').textContent='',2600)}
-function changed(){S.hl=null;if(S.result){S.result=null;renderGroupQ()}renderGrid()}
+function changed(){if(S.prac&&typeof renderPrac==='function')renderPrac();S.hl=null;if(S.result){S.result=null;renderGroupQ()}renderGrid()}
 
 /* --- 격자판 터치·드래그 --- */
 const svg=$('grid');
@@ -752,12 +862,60 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLower
 
 /* --- 자동 피드백: 만든 물질 판별 · 작용기 표시 · 목표와의 구조 차이 (반응 경로는 말하지 않음) --- */
 /* 용어는 여기 한 곳에서만 바꾸면 화면 전체에 반영됩니다 */
-const TERM={oh:'하이드록시기',cooh:'카복실기',coo:'에스터기',cho:'알데하이드기',co:'카보닐기',ether:'에터 결합',nh:'아미노기',cc2:'탄소 간 이중 결합'};
-const GSYM={oh:'−OH',cooh:'−COOH',coo:'−COO−',cho:'−CHO',co:'−CO−',ether:'−O−',nh:'−NH₂',cc2:'C=C'};
-const KIND={oh:'알코올',cooh:'카복실산',coo:'에스터',cho:'알데하이드',co:'케톤',ether:'에터',nh:'아민'};
-const KNOWN=[['메테인','C'],['에테인','CC'],['프로페인','CCC'],['뷰테인','CCCC'],['에텐','C=C'],['메탄올','CO'],['에탄올','CCO'],['프로판올','CCCO'],['2-프로판올','CC(O)C'],['뷰탄올','CCCCO'],['3-메틸뷰탄-1-올','CC(C)CCO'],['폼알데하이드(메탄알)','C=O'],['아세트알데하이드(에탄알)','CC=O'],['프로피온알데하이드(프로판알)','CCC=O'],['아세톤(프로판온)','CC(=O)C'],['폼산(메탄산)','C(=O)O'],['아세트산(에탄산)','CC(=O)O'],['프로피온산(프로판산)','CCC(=O)O'],['뷰탄산','CCCC(=O)O'],['다이메틸 에터','COC'],['메탄산 메틸','C(=O)OC'],['아세트산 메틸','CC(=O)OC'],['메탄산 에틸','C(=O)OCC'],['아세트산 에틸','CC(=O)OCC'],['프로판산 에틸','CCC(=O)OCC'],['뷰탄산 에틸','CCCC(=O)OCC'],['아세트산 아이소아밀','CC(=O)OCCC(C)C'],['아세트산 펜틸','CC(=O)OCCCCC'],['물','O'],['메틸아민','CN'],['에틸아민','CCN']].map(([n,s])=>({n,s,g:parseS(s)}));
+const TERM={oh:'하이드록시기',phoh:'하이드록시기',cooh:'카복실기',coo:'에스터기',cho:'알데하이드기',co:'카보닐기',ether:'에터 결합',nh:'아미노기',cc2:'탄소 간 이중 결합',cc3:'탄소 간 삼중 결합',ar:'벤젠 고리'};
+const GSYM={oh:'−OH',phoh:'−OH',cooh:'−COOH',coo:'−COO−',cho:'−CHO',co:'−CO−',ether:'−O−',nh:'−NH₂',cc2:'C=C',cc3:'C≡C',ar:''};
+const KIND={oh:'알코올',phoh:'페놀류',cooh:'카복실산',coo:'에스터',cho:'알데하이드',co:'케톤',ether:'에터',nh:'아민'};
+/* 앱이 이름을 알려 주는 물질 목록 [이름, 구조, (설명)] — 교과서 물질은 교과서 이름, 그 밖은 대한화학회 이름 + 관용명 */
+const KNOWN=[
+ /* 알케인 */
+ ['메테인','C'],['에테인','CC'],['프로페인','CCC'],['뷰테인','CCCC'],['2-메틸프로페인(아이소뷰테인)','CC(C)C'],
+ ['펜테인','CCCCC'],['2-메틸뷰테인(아이소펜테인)','CCC(C)C'],['2,2-다이메틸프로페인(네오펜테인)','CC(C)(C)C'],
+ ['헥세인','CCCCCC'],['헵테인','CCCCCCC'],['옥테인','CCCCCCCC'],
+ /* 알켄·알카인 */
+ ['에텐(에틸렌)','C=C'],['프로펜(프로필렌)','C=CC'],['1-뷰텐','C=CCC'],['2-뷰텐','CC=CC'],['2-메틸프로펜','C=C(C)C'],
+ ['에타인(아세틸렌)','C#C'],['프로파인','C#CC'],
+ /* 고리 탄화수소 */
+ ['사이클로프로페인','C1CC1'],['사이클로뷰테인','C1CCC1'],['사이클로펜테인','C1CCCC1'],['사이클로헥세인','C1CCCCC1'],
+ ['벤젠','C1=CC=CC=C1'],['톨루엔(메틸벤젠)','CC1=CC=CC=C1'],
+ /* 벤젠 고리를 가진 대표 물질 */
+ ['페놀','OC1=CC=CC=C1'],['벤조산','OC(=O)C1=CC=CC=C1'],['살리실산','OC(=O)C1=CC=CC=C1O'],
+ ['아세틸살리실산(아스피린)','CC(=O)OC1=CC=CC=C1C(=O)O'],
+ /* 알코올 */
+ ['메탄올','CO'],['에탄올','CCO'],['프로판올(1-프로판올)','CCCO'],['2-프로판올','CC(O)C'],
+ ['1-뷰탄올','CCCCO'],['2-뷰탄올','CCC(O)C'],['2-메틸-1-프로판올','CC(C)CO'],['2-메틸-2-프로판올','CC(C)(C)O'],
+ ['1-펜탄올','CCCCCO'],['2-펜탄올','CCCC(O)C'],['3-펜탄올','CCC(O)CC'],['2-메틸-1-뷰탄올','CCC(C)CO'],
+ ['3-메틸-1-뷰탄올(아이소아밀 알코올)','CC(C)CCO'],['2-메틸-2-뷰탄올','CCC(C)(C)O'],['3-메틸-2-뷰탄올','CC(C)C(C)O'],
+ ['2,2-다이메틸-1-프로판올','CC(C)(C)CO'],
+ ['에틸렌 글라이콜(1,2-에테인다이올)','OCCO'],['글리세롤(1,2,3-프로페인트라이올)','OCC(O)CO'],
+ /* 에터 */
+ ['다이메틸 에터','COC'],['에틸 메틸 에터','CCOC'],['메틸 프로필 에터','CCCOC'],['아이소프로필 메틸 에터','CC(C)OC'],
+ ['다이에틸 에터','CCOCC'],['뷰틸 메틸 에터','CCCCOC'],['sec-뷰틸 메틸 에터','CCC(C)OC'],['아이소뷰틸 메틸 에터','CC(C)COC'],
+ ['tert-뷰틸 메틸 에터','CC(C)(C)OC'],['에틸 프로필 에터','CCCOCC'],['에틸 아이소프로필 에터','CC(C)OCC'],
+ /* 알데하이드 */
+ ['폼알데하이드(메탄알)','C=O'],['아세트알데하이드(에탄알)','CC=O'],['프로피온알데하이드(프로판알)','CCC=O'],
+ ['뷰탄알','CCCC=O'],['2-메틸프로판알','CC(C)C=O'],['펜탄알','CCCCC=O'],['2-메틸뷰탄알','CCC(C)C=O'],
+ ['3-메틸뷰탄알','CC(C)CC=O'],['2,2-다이메틸프로판알','CC(C)(C)C=O'],
+ /* 케톤 */
+ ['아세톤(프로판온)','CC(=O)C'],['뷰탄온','CCC(=O)C'],['2-펜탄온','CCCC(=O)C'],['3-펜탄온','CCC(=O)CC'],['3-메틸-2-뷰탄온','CC(C)C(=O)C'],
+ /* 카복실산 */
+ ['폼산(메탄산)','C(=O)O'],['아세트산(에탄산)','CC(=O)O'],['프로피온산(프로판산)','CCC(=O)O'],['뷰탄산','CCCC(=O)O'],
+ ['2-메틸프로판산','CC(C)C(=O)O'],['펜탄산','CCCCC(=O)O'],['2-메틸뷰탄산','CCC(C)C(=O)O'],['3-메틸뷰탄산','CC(C)CC(=O)O'],
+ ['2,2-다이메틸프로판산','CC(C)(C)C(=O)O'],
+ /* 에스터 */
+ ['메탄산 메틸(폼산 메틸)','C(=O)OC'],['메탄산 에틸(폼산 에틸)','C(=O)OCC'],['아세트산 메틸','CC(=O)OC'],
+ ['메탄산 프로필','C(=O)OCCC'],['메탄산 아이소프로필','C(=O)OC(C)C'],['아세트산 에틸','CC(=O)OCC'],['프로판산 메틸','CCC(=O)OC'],
+ ['메탄산 뷰틸','C(=O)OCCCC'],['메탄산 sec-뷰틸','C(=O)OC(C)CC'],['메탄산 아이소뷰틸','C(=O)OCC(C)C'],['메탄산 tert-뷰틸','C(=O)OC(C)(C)C'],
+ ['아세트산 프로필','CC(=O)OCCC'],['아세트산 아이소프로필','CC(=O)OC(C)C'],['프로판산 에틸','CCC(=O)OCC'],['뷰탄산 메틸','CCCC(=O)OC'],
+ ['2-메틸프로판산 메틸','CC(C)C(=O)OC'],
+ ['뷰탄산 에틸','CCCC(=O)OCC'],['아세트산 아이소아밀','CC(=O)OCCC(C)C'],['아세트산 펜틸','CC(=O)OCCCCC'],['아세트산 옥틸','CC(=O)OCCCCCCCC'],
+ /* 질소를 포함한 물질 */
+ ['메틸아민','CN'],['에틸아민','CCN'],['다이메틸아민','CNC'],['트라이메틸아민','CN(C)C'],['글라이신','NCC(=O)O'],
+ /* 탄소 화합물이 아닌 물질 */
+ ['물','O','탄소 화합물이 아닌 물질'],['과산화 수소','OO','탄소 화합물이 아닌 물질'],['암모니아','N','탄소 화합물이 아닌 물질'],
+ ['이산화 탄소','O=C=O','탄소를 포함하지만 보통 탄소 화합물로 분류하지 않는 물질']
+].map(([n,s,d])=>({n,s,d,g:parseS(s)}));
 function josa(w,a,b){const s=String(w).replace(/\([^)]*\)\s*$/,'').trim();const ch=s.charCodeAt(s.length-1);if(ch<0xAC00||ch>0xD7A3)return w+b;return w+((ch-0xAC00)%28?a:b)}
-const gLabel=k=>`${TERM[k]}(${GSYM[k]})`;
+const gLabel=k=>GSYM[k]?`${TERM[k]}(${GSYM[k]})`:TERM[k];
 const PKEY={ester:'coo',acid:'cooh',oh:'oh',cho:'cho',cooh:'cooh',coo:'coo'};
 function groupsOf(g){
   const out=[],carbonyl=new Set();
@@ -772,28 +930,42 @@ function groupsOf(g){
     else if(a.nb.filter(n=>g[n.j].el==='C').length===2)out.push({k:'co',at:[i,dO.j]});
   });
   g.forEach((a,i)=>{
-    if(a.el==='O'&&a.nb.length===1&&a.h===1&&g[a.nb[0].j].el==='C'&&!carbonyl.has(a.nb[0].j))out.push({k:'oh',at:[i]});
+    if(a.el==='O'&&a.nb.length===1&&a.h===1&&g[a.nb[0].j].el==='C'&&!carbonyl.has(a.nb[0].j))out.push({k:g[a.nb[0].j].ar?'phoh':'oh',at:[i]});
     if(a.el==='O'&&a.nb.length===2&&a.h===0&&a.nb.every(n=>g[n.j].el==='C'&&n.o===1&&!carbonyl.has(n.j)))out.push({k:'ether',at:[i]});
     if(a.el==='N'&&a.h>=1&&a.nb.some(n=>g[n.j].el==='C'))out.push({k:'nh',at:[i]});
-    if(a.el==='C')a.nb.forEach(n=>{if(n.j>i&&n.o===2&&g[n.j].el==='C')out.push({k:'cc2',at:[i,n.j]})});
+    if(a.el==='C')a.nb.forEach(n=>{if(n.j>i&&n.o===2&&g[n.j].el==='C')out.push({k:'cc2',at:[i,n.j]});if(n.j>i&&n.o===3&&g[n.j].el==='C')out.push({k:'cc3',at:[i,n.j]})});
   });
+  (g.rings||[]).forEach(cyc=>out.push({k:'ar',at:cyc.slice()}));
   return out;
 }
 const kindsOf=gs=>[...new Set(gs.map(x=>x.k))];
 const nCarbon=g=>g.filter(a=>a.el==='C').length;
 function nameOf(g){const k=KNOWN.find(k=>iso(k.g,g));return k?k.n:''}
-function kindText(ks){const fk=ks.filter(k=>KIND[k]);if(!fk.length)return ks.includes('cc2')?'작용기가 없고 탄소 간 이중 결합이 있는 탄화수소':'작용기가 없는 탄화수소';return fk.map(k=>KIND[k]).join('·')}
+function kindText(ks,g){
+  const els=new Set((g||[]).map(a=>a.el));
+  if(g&&!els.has('C'))return '탄소 화합물이 아닌 물질';
+  if(ks.includes('nh')&&ks.includes('cooh'))return '아미노기와 카복실기를 함께 가진 아미노산';
+  const fk=ks.filter(k=>KIND[k]);
+  if(fk.length)return fk.map(k=>KIND[k]).join('·');
+  const onlyCH=g?[...els].every(e=>e==='C'):true;
+  if(!onlyCH)return '이 앱에서 구분하는 작용기가 없는 물질';
+  if(ks.includes('ar'))return '벤젠 고리를 가진 방향족 탄화수소';
+  if(ks.includes('cc3'))return '탄소 간 삼중 결합이 있는 탄화수소';
+  if(ks.includes('cc2'))return '탄소 간 이중 결합이 있는 탄화수소';
+  return '작용기가 없는 탄화수소';
+}
 /* 학생 분자 하나에 대한 정보 (그래프, 원자 id, 작용기) */
 function molInfo(memb){
   const {g,ids}=toGraphIds(memb),gs=groupsOf(g);
-  return {g,ids,gs,ks:kindsOf(gs),name:nameOf(g),f:formula(g),c:nCarbon(g),
+  const kn=KNOWN.find(k=>iso(k.g,g));
+  return {g,ids,gs,ks:kindsOf(gs),name:kn?kn.n:'',desc:kn&&kn.d||'',f:formula(g),c:nCarbon(g),
     hl:gs.map(x=>{const set=new Set(x.at.map(i=>ids[i]));x.at.forEach(i=>{const id=ids[i],el=S.atoms.get(id).el;if(el==='O'||el==='N'||x.k==='cho')hNbrs(id).forEach(h=>set.add(h))});return{ids:[...set],label:gLabel(x.k)}})};
 }
 function hNbrs(id){const out=[];S.bonds.forEach(b=>{const o=b.a===id?b.b:b.b===id?b.a:null;if(o!=null&&S.atoms.get(o).el==='H')out.push(o)});return out}
 function idLine(m){
-  const who=m.name?`${m.name} (${m.f})`:`분자식 ${m.f}인 물질`;
-  const gl=m.ks.filter(k=>k!=='cc2');
-  const kt=kindText(m.ks);
+  const who=m.name?`${m.name} (${m.f})`:`분자식 ${m.f}인 물질 (앱 물질 목록에 없어 이름은 표시하지 않아요)`;
+  const gl=m.ks.filter(k=>k!=='cc2'&&k!=='cc3'&&k!=='ar');
+  const kt=m.desc||kindText(m.ks,m.g);
   const gtxt=gl.length?`색으로 표시한 부분은 ${josa(gl.map(gLabel).join(', '),'이에요','예요')}. 그래서 이 물질은 ${josa(kt,'이에요','예요')}.`:`${josa(kt,'이에요','예요')}.`;
   return {t:`만든 물질: ${who}`,d:gtxt};
 }
@@ -813,6 +985,7 @@ function diffLines(m,tg,tname){
 function patternDiff(m,need){
   const L=[`목표: ${josa(gLabel(need),'을','를')} 가진 물질`];
   if(m.ks.includes(need))return L;
+  if(need==='oh'&&m.ks.includes('phoh')){L.push('벤젠 고리에 직접 붙은 −OH를 가진 물질은 페놀류로, 알코올과 구분해요. 고리가 아닌 탄소에 −OH가 붙어야 해요.');return L}
   L.push(`지금 물질에는 ${josa(gLabel(need),'이','가')} 없어요.`);
   if(need==='coo'&&m.ks.includes('cooh'))L.push(`${gLabel('cooh')}의 H 자리에 탄소가 결합한 구조여야 해요.`);
   if(need==='cooh'&&m.ks.includes('coo'))L.push(`${gLabel('coo')}의 한쪽 탄소 대신 H가 결합한 구조여야 해요.`);
@@ -849,6 +1022,17 @@ function fbHTML(blocks,hint){
   return blocks.map(b=>`<div class="fbk"><b>${esc(b.t)}</b>${b.d?`<span>${esc(b.d)}</span>`:''}${b.L.length?`<ul>${b.L.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`).join('')+(hint?`<div class="fbh">${esc(hint)}</div>`:'');
 }
 
+/* --- 점수: 속도 점수(500~1000, 카훗 방식) × 시도 배율 --- */
+const MULT=[1,0.7,0.5,0.3];
+const defaultLimit=qi=>qi<6?120:qi<10?180:240;   /* Q1~Q6 2분, Q7~Q10 3분, 심화 4분 */
+function pointsOf(sec,limit,attempt){
+  const L=limit>0?limit:120,t=Math.max(0,Number(sec)||0);
+  const speed=t<0.5?1000:Math.round(1000*(1-Math.min(t/L,1)/2));
+  return Math.round(speed*MULT[Math.min(Math.max(attempt,1),4)-1]);
+}
+function ptsHTML(){const r=S.result;if(!r||!r.ok||r.pts==null)return '';
+  return `<span class="ptsline">+${r.pts}점 · ${r.att===1?'첫 시도 정답!':r.att+'번째 시도에 정답'}${r.prank?` · 지금 이 문제 ${r.prank}위`:''}</span>`}
+
 /* --- 채점 --- */
 function grade(){
   const q=QS[S.q];
@@ -884,10 +1068,68 @@ function startFbPoll(){if(fbTimer||!SHEET_API)return;fbTimer=setInterval(pollFb,
 async function pollFb(){
   if(!SHEET_API||S.q==null||!S.lastT||document.hidden)return;
   const d=new Date();d.setHours(0,0,0,0);
-  const u=SHEET_API+'?mode=mine&cls='+encodeURIComponent(S.cls)+'&grp='+encodeURIComponent(S.num!=null?S.num:S.group)+'&name='+encodeURIComponent(S.name||'')+'&q='+(S.q+1)+'&since='+d.getTime();
+  const u=SHEET_API+'?mode=mine&cls='+encodeURIComponent(S.cls)+'&grp='+encodeURIComponent(S.group||0)+'&name='+encodeURIComponent(S.name||'')+'&q='+(S.q+1)+'&since='+d.getTime();
   try{const j=await (await fetch(u)).json();const rs=(j.rows||[]).filter(r=>r.tfb).sort((a,b)=>a.t-b.t);const last=rs[rs.length-1];
     if(last&&last.tfb!==S.tfbShown){S.tfbShown=last.tfb;renderTeacherFb()}}catch(e){}
 }
+/* --- 조작 연습 · 교사가 문제 열기 --- */
+const SYNC=!!SHEET_API;
+function hasBond(e1,e2,o){return S.bonds.some(b=>{const x=S.atoms.get(b.a).el,y=S.atoms.get(b.b).el;return ((x===e1&&y===e2)||(x===e2&&y===e1))&&(!o||b.o===o)})}
+function molPresent(sm){const t=parseS(sm);return groupsRaw().some(memb=>memb.every(id=>free(id)===0)&&iso(t,toGraph(memb)))}
+const PRAC=[
+ {title:'연습 1 · 메테인(CH₄) 만들기',ans:'C',steps:[
+  {t:'아래 C 버튼을 눌러 격자판의 빈 칸으로 끌어다 놓으세요. (빈 칸을 톡 눌러도 놓여요)',ok:()=>[...S.atoms.values()].some(a=>a.el==='C')},
+  {t:'H 버튼을 누른 다음, 놓인 C에서 옆 칸으로 손가락을 끌어 보세요. 수소가 결합된 채로 생겨요.',ok:()=>hasBond('C','H')},
+  {t:'같은 방법으로 C의 위·아래·옆에 수소를 붙여 4개를 채우세요. C 모서리의 숫자가 사라지면 결합을 다 채운 거예요.',ok:()=>molPresent('C')},
+  {t:'제출하기를 눌러 보세요.',ok:null}]},
+ {title:'연습 2 · 폼알데하이드(HCHO) 만들기',ans:'C=O',steps:[
+  {t:'C를 놓고, O를 고른 다음 C에서 옆 칸으로 끌어 O를 붙이세요.',ok:()=>hasBond('C','O')},
+  {t:'C와 O 사이를 한 번 더 끌어 이어 보세요. 선이 두 줄이 되면 이중 결합이에요. (한 번 더 하면 삼중 결합, 또 하면 끊어져요)',ok:()=>hasBond('C','O',2)},
+  {t:'C에 수소 2개를 붙여 완성하세요. 실수했다면 ↶ 되돌리기를 누르세요.',ok:()=>molPresent('C=O')},
+  {t:'제출하기를 눌러 보세요.',ok:null}]}
+];
+function needMe(){return ('name' in S)&&!S.name}
+function startPrac(i){S.q=null;S.result=null;S.prac={i:i||0};clearAll(false);$('pracMsg').textContent='';renderGroupQ();renderGrid()}
+function stopPrac(){S.prac=null;clearAll(false);renderGroupQ();renderGrid()}
+function renderPrac(){
+  if(!S.prac)return;const p=PRAC[S.prac.i];$('pracTitle').textContent=p.title;
+  let cur=p.steps.findIndex(st=>st.ok&&!st.ok());if(cur<0)cur=p.steps.length-1;
+  $('pracSteps').innerHTML=p.steps.map((st,k)=>`<li class="${k<cur?'done':k===cur?'now':''}">${esc(st.t)}</li>`).join('');
+}
+function pracSubmit(){
+  const p=PRAC[S.prac.i],m=$('pracMsg');
+  for(const a of S.atoms.values()){if(free(a.id)<0){m.className='sent bad';m.textContent='빨간 점선 원자는 결합이 너무 많아요. ↶ 되돌리기로 고쳐 보세요.';return}}
+  if(molPresent(p.ans)&&groupsRaw().length===1){
+    if(S.prac.i+1<PRAC.length){const n=S.prac.i+1;startPrac(n);m.className='sent ok';m.textContent='잘했어요! 다음 연습으로 넘어가요.'}
+    else{try{store.set('pracDone',1)}catch(e){}S.prac=null;clearAll(false);renderGroupQ();renderGrid();toast('');setSent('조작 연습 끝! 선생님이 문제를 열 때까지 기다리세요.','ok')}
+    return;
+  }
+  m.className='sent bad';
+  const p2=p.steps.find(st=>st.ok&&!st.ok());m.textContent='아직 완성되지 않았어요. '+(p2?p2.t:'안내를 다시 확인해 보세요.');
+}
+function renderSide(){
+  const nm=needMe();
+  const pick=$('pickBox');if(pick)pick.hidden=nm||SYNC||!!S.prac;
+  $('waitBox').hidden=nm||!SYNC||S.q!=null||!!S.prac;
+  $('pracBox').hidden=nm||!S.prac;
+  $('pracStart').hidden=nm||!!S.prac||S.q!=null;
+  if(S.prac)renderPrac();
+  $('submit').disabled=nm||(S.q==null&&!S.prac);
+}
+$('pracStart').onclick=()=>startPrac(0);
+$('pracSkip').onclick=()=>{try{store.set('pracDone',1)}catch(e){}stopPrac()};
+/* 교사가 연 문제를 3초마다 확인 */
+let lastOpen=-1;
+async function pollState(){
+  if(!SYNC||document.hidden||needMe())return;
+  try{const j=await (await fetch(SHEET_API+'?mode=state&cls='+encodeURIComponent(S.cls))).json();
+    S.limit=Number(j.limit)||0;const q=Number(j.q)||0;if(q===lastOpen)return;lastOpen=q;
+    if(q>0&&q<=QS.length){if(S.q!==q-1){S.prac=null;setGQ(q-1);setSent(`선생님이 Q${q}을(를) 열었어요.`,'ok')}}
+    else if(S.q!=null){S.q=null;S.result=null;renderGroupQ();setSent('선생님이 문제를 닫았어요. 잠시 기다리세요.','')}
+  }catch(e){}
+}
+if(SYNC){setInterval(pollState,3000);setTimeout(pollState,300)}
+
 /* --- 시트로 전송 --- */
 function structOf(){const ids=[...S.atoms.keys()],ix=new Map(ids.map((id,i)=>[id,i]));return{a:ids.map(id=>{const a=S.atoms.get(id);return[a.el,a.c,a.r]}),b:S.bonds.map(b=>[ix.get(b.a),ix.get(b.b),b.o])}}
 function structPNG(st){return new Promise(res=>{
@@ -903,15 +1145,16 @@ async function send(r){
   if(!SHEET_API)return;
   setSent('선생님께 보내는 중…','');$('submit').disabled=true;
   const st=structOf();let img='';try{img=await structPNG(st)}catch(e){}
-  const body={cls:S.cls,grp:S.group,q:S.q+1,ok:!!r.ok,sec:r.sec,formula:groupsRaw().map(liveFormula).join(' + '),msg:r.ok?'':r.msg,struct:st,image:img};
-  try{const res=await fetch(SHEET_API,{method:'POST',body:JSON.stringify(body)});const j=await res.json();if(j.ok&&j.t){S.lastT=j.t;startFbPoll()}setSent(j.ok?('선생님께 전송됨 ✓'+(j.rank?' · 이 문제 '+j.rank+'번째 정답':'')):'전송 실패 · 다시 제출해 주세요',j.ok?'ok':'bad')}
+  const body={cls:S.cls,grp:S.group,q:S.q+1,ok:!!r.ok,sec:r.secx,limit:S.limit||defaultLimit(S.q),formula:groupsRaw().map(liveFormula).join(' + '),msg:r.ok?'':r.msg,struct:st,image:img};
+  try{const res=await fetch(SHEET_API,{method:'POST',body:JSON.stringify(body)});const j=await res.json();if(j.ok&&j.t){S.lastT=j.t;startFbPoll()}if(j.ok&&j.points!==undefined&&j.points!==''&&S.result&&S.result.ok){S.result.pts=j.points;S.result.att=j.attempt;S.result.prank=j.prank;renderGroupQ()}else if(j.ok&&j.points===''&&S.result&&S.result.ok){S.result.pts=null;renderGroupQ()}setSent(j.ok?('선생님께 전송됨 ✓'+''):'전송 실패 · 다시 제출해 주세요',j.ok?'ok':'bad')}
   catch(e){setSent('전송을 확인하지 못했어요 · 인터넷 연결을 확인하세요','bad')}
   setTimeout(()=>{$('submit').disabled=S.q==null},1200);
 }
-$('submit').onclick=()=>{if(S.q==null)return;const r=grade();r.sec=Math.max(1,Math.round((Date.now()-S.qStart)/1000));S.result=r;S.hl=r.hl||null;renderGrid();renderGroupQ();if(S.atoms.size)send(r)};
+$('submit').onclick=()=>{if(S.prac){pracSubmit();return}if(S.q==null)return;const r=grade();r.secx=Math.round((Date.now()-S.qStart)/100)/10;r.sec=Math.max(1,Math.round(r.secx));S.att=(S.att||0)+1;r.att=S.att;if(r.ok)r.pts=pointsOf(r.secx,S.limit||defaultLimit(S.q),S.att);S.result=r;S.hl=r.hl||null;renderGrid();renderGroupQ();if(S.atoms.size)send(r)};
 
 /* 시작 */
 renderBoard();renderGroupQ();renderGrid();route();
+if(SYNC&&!store.get('pracDone',0)&&!needMe())startPrac(0);
 </script>
 </body>
 </html>
