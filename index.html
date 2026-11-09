@@ -335,16 +335,18 @@ const SHEET_API = String(window.SHEET_API_URL || '').trim();
 
 /* ===== 문제 데이터 (정답은 간이 SMILES: C,N,O / = 이중결합 / () 가지, H는 원자가로 계산) ===== */
 const QS=[
- {tag:'작용기',title:'에스터를 만들어라',given:'−COO−',body:'에스터 결합을 가진 분자를 아무거나 하나 만드세요.',pattern:'ester',reveal:'예) CH₃COOCH₃, HCOOCH₂CH₃, CH₃COOCH₂CH₃',note:'카복실산 −COOH의 H 자리에 탄화수소기가 결합하면 에스터가 됩니다. 모둠마다 다른 답을 비교해 공통 구조를 찾아보세요.'},
- {tag:'작용기',title:'카복실산을 만들어라',given:'−COOH',body:'카복실기를 가진 분자를 아무거나 하나 만드세요.',pattern:'acid',reveal:'예) HCOOH, CH₃COOH, CH₃CH₂COOH',note:'카복실기는 하나의 탄소에 C=O와 −OH가 함께 결합한 구조입니다.'},
- {tag:'화합물',title:'에탄올',given:'C₂H₅OH',body:'소주에 들어 있는 에탄올의 구조식을 만드세요.',answers:['CCO'],reveal:'CH₃CH₂OH',note:'하이드록시기(−OH)가 탄소에 결합한 알코올입니다.'},
- {tag:'화합물',title:'아세트산 에틸',given:'CH₃COOC₂H₅',body:'아세트산 에틸의 구조식을 만드세요.',answers:['CC(=O)OCC'],reveal:'CH₃COOCH₂CH₃',note:'아세트산(산 부분)과 에탄올(알코올 부분)이 에스터 결합으로 이어져 있습니다.'},
- {tag:'생성물 예측',title:'에탄올의 산화',given:'CH₃CH₂OH ─ 충분히 산화 → ?',body:'최종 생성되는 카복실산의 구조식을 만드세요.',answers:['CC(=O)O'],reveal:'CH₃COOH (아세트산)',note:'1차 알코올은 알데하이드(CH₃CHO)를 거쳐 카복실산으로 산화됩니다.'},
- {tag:'생성물 예측',title:'1-프로판올의 산화',given:'CH₃CH₂CH₂OH ─ 충분히 산화 → ?',body:'최종 생성되는 카복실산의 구조식을 만드세요.',answers:['CCC(=O)O'],reveal:'CH₃CH₂COOH (프로판산)',note:'탄소 수는 그대로이고, −CH₂OH가 −COOH로 바뀝니다.'},
- {tag:'생성물 예측',title:'에스터화 반응',given:'CH₃COOH + CH₃OH ─ 진한 황산, 가열 →',body:'생성물 2가지를 모두 만드세요.',answers:['CC(=O)OC','O'],reveal:'CH₃COOCH₃ (아세트산 메틸) + H₂O',note:'카복실산과 알코올에서 물이 빠지며 에스터가 생성됩니다. 에스터화는 가역 반응입니다.'},
- {tag:'생성물 예측',title:'에스터의 가수 분해',given:'CH₃COOC₂H₅ + H₂O →',body:'생성물 2가지를 모두 만드세요.',answers:['CC(=O)O','CCO'],reveal:'CH₃COOH + CH₃CH₂OH',note:'가수 분해는 에스터화의 역반응으로, 카복실산과 알코올이 생성됩니다.'},
- {tag:'역추적',title:'바나나향의 재료',given:'CH₃COOCH₂CH₂CH(CH₃)₂',body:'바나나향 아세트산 아이소아밀을 만드는 데 필요한 카복실산과 알코올을 모두 만드세요.',answers:['CC(=O)O','CC(C)CCO'],reveal:'CH₃COOH + (CH₃)₂CHCH₂CH₂OH (3-메틸뷰탄-1-올)',note:'소주의 에탄올은 산화해 산 부분(아세트산)으로 쓸 수 있지만, 알코올 부분은 따로 넣어야 합니다.'},
- {tag:'역추적',title:'파인애플향의 재료',given:'CH₃CH₂CH₂COOC₂H₅',body:'파인애플향 뷰탄산 에틸을 만드는 데 필요한 카복실산과 알코올을 모두 만드세요.',answers:['CCCC(=O)O','CCO'],reveal:'CH₃CH₂CH₂COOH + CH₃CH₂OH',note:'이번에는 소주의 에탄올을 그대로 알코올 부분으로 쓸 수 있습니다.'}
+ {tag:'탄화수소',title:'프로페인',given:'C₃H₈',body:'탄소 원자 3개로 이루어진 탄화수소인 프로페인의 구조식을 만드세요.',answers:['CCC'],reveal:'CH₃CH₂CH₃ (C₃H₈)',note:'탄화수소는 탄소(C)와 수소(H)로만 이루어진 탄소 화합물입니다. 탄소 원자는 최대 4개까지 공유 결합을 합니다.'},
+ {tag:'작용기',title:'알코올을 만들어라',given:'−OH',body:'하이드록시기를 가진 물질을 아무거나 하나 만드세요.',pattern:'oh',reveal:'예) CH₃OH, C₂H₅OH, C₃H₇OH',note:'알코올은 탄화수소의 탄소 원자에 수소 원자 대신 −OH가 결합한 화합물입니다. 모둠(학생)마다 다른 답을 비교해 공통 구조를 찾아보세요.'},
+ {tag:'작용기',title:'알데하이드를 만들어라',given:'−CHO',body:'알데하이드기를 가진 물질을 아무거나 하나 만드세요.',pattern:'cho',reveal:'예) HCHO, CH₃CHO, C₂H₅CHO',note:'알데하이드는 탄화수소의 탄소 원자에 수소 원자 대신 −CHO가 결합한 화합물입니다.'},
+ {tag:'작용기',title:'카복실산을 만들어라',given:'−COOH',body:'카복실기를 가진 물질을 아무거나 하나 만드세요.',pattern:'cooh',reveal:'예) HCOOH, CH₃COOH, C₂H₅COOH',note:'카복실산은 탄화수소의 탄소 원자에 수소 원자 대신 −COOH가 결합한 화합물입니다.'},
+ {tag:'화합물',title:'에탄올',given:'C₂H₅OH',body:'포도주(술)의 주성분인 에탄올의 구조식을 만드세요.',answers:['CCO'],reveal:'CH₃CH₂OH (분자식 C₂H₆O, 시성식 C₂H₅OH)',note:'에탄올은 하이드록시기(−OH)를 가진 알코올입니다.'},
+ {tag:'화합물',title:'아세트알데하이드',given:'CH₃CHO',body:'아세트알데하이드(에탄알)의 구조식을 만드세요.',answers:['CC=O'],reveal:'CH₃CHO (분자식 C₂H₄O)',note:'아세트알데하이드는 알데하이드기(−CHO)를 가진 알데하이드입니다. 에탄올과 탄소 수는 같지만 작용기가 다릅니다.'},
+ {tag:'산화',title:'에탄올이 한 번 산화되면?',given:'C₂H₅OH ─ 산화 → ?',body:'에탄올이 산화되어 생성되는 물질의 구조식을 만드세요.',answers:['CC=O'],reveal:'CH₃CHO (아세트알데하이드)',note:'알코올이 산화되면 −OH를 가진 탄소가 −CHO를 가진 알데하이드가 됩니다.'},
+ {tag:'산화',title:'아세트알데하이드가 산화되면?',given:'CH₃CHO ─ 산화 → ?',body:'아세트알데하이드가 산화되어 생성되는 물질의 구조식을 만드세요.',answers:['CC(=O)O'],reveal:'CH₃COOH (아세트산)',note:'알데하이드가 산화되면 −COOH를 가진 카복실산이 됩니다. 포도주가 식초가 되는 까닭입니다.'},
+ {tag:'산화',title:'메탄올의 산화',given:'CH₃OH ─ 산화 → (   ) ─ 산화 → (   )',body:'괄호에 들어갈 두 물질의 구조식을 모두 만드세요.',answers:['C=O','C(=O)O'],reveal:'HCHO (폼알데하이드) → HCOOH (폼산)',note:'메탄올도 에탄올처럼 알데하이드를 거쳐 카복실산으로 산화됩니다.'},
+ {tag:'산화',title:'프로판올이 끝까지 산화되면?',given:'CH₃CH₂CH₂OH ─ 산화 → ─ 산화 → ?',body:'프로판올이 산화되어 최종적으로 생성되는 물질의 구조식을 만드세요.',answers:['CCC(=O)O'],reveal:'C₂H₅COOH (프로피온산)',note:'탄소 수는 그대로이고, −OH가 결합한 탄소가 −COOH로 바뀝니다.'},
+ {tag:'심화 · 과학 이야기',title:'에스터를 만들어라',given:'−COO−',body:'에스터기를 가진 물질을 아무거나 하나 만드세요.',pattern:'coo',reveal:'예) CH₃COOCH₃, CH₃COOC₂H₅',note:'과일과 꽃의 향을 내는 물질은 대부분 에스터기(−COO−)를 가진 에스터입니다. (교과서 94쪽 과학 이야기)'},
+ {tag:'심화 · 과학 이야기',title:'바나나 향',given:'CH₃COOC₅H₁₁',body:'바나나 향을 내는 에스터의 구조식을 만드세요.',answers:['CC(=O)OCCC(C)C'],alts:[['CC(=O)OCCC(C)C'],['CC(=O)OCCCCC']],reveal:'CH₃COOCH₂CH₂CH(CH₃)₂ (아세트산 아이소아밀) 또는 CH₃COO(CH₂)₄CH₃ (아세트산 펜틸)',note:'교과서에는 CH₃COOC₅H₁₁로 나와 있습니다. −C₅H₁₁ 부분의 연결 모양이 다른 두 구조를 모두 정답으로 인정합니다.'}
 ];
 const CODES=['418','263','905','137','752','386','624','591','870','349'];
 QS.forEach((q,i)=>q.code=CODES[i]);
@@ -752,13 +754,13 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLower
 
 /* --- 자동 피드백: 만든 물질 판별 · 작용기 표시 · 목표와의 구조 차이 (반응 경로는 말하지 않음) --- */
 /* 용어는 여기 한 곳에서만 바꾸면 화면 전체에 반영됩니다 */
-const TERM={oh:'하이드록시기',cooh:'카복실기',coo:'에스터 결합',cho:'폼일기',co:'카보닐기',ether:'에터 결합',nh:'아미노기',cc2:'탄소 간 이중 결합'};
+const TERM={oh:'하이드록시기',cooh:'카복실기',coo:'에스터기',cho:'알데하이드기',co:'카보닐기',ether:'에터 결합',nh:'아미노기',cc2:'탄소 간 이중 결합'};
 const GSYM={oh:'−OH',cooh:'−COOH',coo:'−COO−',cho:'−CHO',co:'−CO−',ether:'−O−',nh:'−NH₂',cc2:'C=C'};
 const KIND={oh:'알코올',cooh:'카복실산',coo:'에스터',cho:'알데하이드',co:'케톤',ether:'에터',nh:'아민'};
-const KNOWN=[['메테인','C'],['에테인','CC'],['프로페인','CCC'],['에텐','C=C'],['메탄올','CO'],['에탄올','CCO'],['1-프로판올','CCCO'],['2-프로판올','CC(O)C'],['1-뷰탄올','CCCCO'],['3-메틸뷰탄-1-올','CC(C)CCO'],['폼알데하이드(메탄알)','C=O'],['아세트알데하이드(에탄알)','CC=O'],['프로판알','CCC=O'],['아세톤(프로판온)','CC(=O)C'],['메탄산(폼산)','C(=O)O'],['아세트산','CC(=O)O'],['프로판산','CCC(=O)O'],['뷰탄산','CCCC(=O)O'],['다이메틸 에터','COC'],['메탄산 메틸','C(=O)OC'],['아세트산 메틸','CC(=O)OC'],['메탄산 에틸','C(=O)OCC'],['아세트산 에틸','CC(=O)OCC'],['프로판산 에틸','CCC(=O)OCC'],['뷰탄산 에틸','CCCC(=O)OCC'],['아세트산 아이소아밀','CC(=O)OCCC(C)C'],['물','O'],['메틸아민','CN'],['에틸아민','CCN']].map(([n,s])=>({n,s,g:parseS(s)}));
+const KNOWN=[['메테인','C'],['에테인','CC'],['프로페인','CCC'],['뷰테인','CCCC'],['에텐','C=C'],['메탄올','CO'],['에탄올','CCO'],['프로판올','CCCO'],['2-프로판올','CC(O)C'],['뷰탄올','CCCCO'],['3-메틸뷰탄-1-올','CC(C)CCO'],['폼알데하이드(메탄알)','C=O'],['아세트알데하이드(에탄알)','CC=O'],['프로피온알데하이드(프로판알)','CCC=O'],['아세톤(프로판온)','CC(=O)C'],['폼산(메탄산)','C(=O)O'],['아세트산(에탄산)','CC(=O)O'],['프로피온산(프로판산)','CCC(=O)O'],['뷰탄산','CCCC(=O)O'],['다이메틸 에터','COC'],['메탄산 메틸','C(=O)OC'],['아세트산 메틸','CC(=O)OC'],['메탄산 에틸','C(=O)OCC'],['아세트산 에틸','CC(=O)OCC'],['프로판산 에틸','CCC(=O)OCC'],['뷰탄산 에틸','CCCC(=O)OCC'],['아세트산 아이소아밀','CC(=O)OCCC(C)C'],['아세트산 펜틸','CC(=O)OCCCCC'],['물','O'],['메틸아민','CN'],['에틸아민','CCN']].map(([n,s])=>({n,s,g:parseS(s)}));
 function josa(w,a,b){const s=String(w).replace(/\([^)]*\)\s*$/,'').trim();const ch=s.charCodeAt(s.length-1);if(ch<0xAC00||ch>0xD7A3)return w+b;return w+((ch-0xAC00)%28?a:b)}
 const gLabel=k=>`${TERM[k]}(${GSYM[k]})`;
-const PKEY={ester:'coo',acid:'cooh'};
+const PKEY={ester:'coo',acid:'cooh',oh:'oh',cho:'cho',cooh:'cooh',coo:'coo'};
 function groupsOf(g){
   const out=[],carbonyl=new Set();
   g.forEach((a,i)=>{
@@ -861,15 +863,15 @@ function grade(){
   let ok=false,head='';
   if(q.pattern){
     if(cs.length!==1)head=`분자를 하나만 만들어 주세요. 지금 서로 떨어진 분자가 ${cs.length}개 있어요.`;
-    else ok=PAT[q.pattern](cs[0]);
+    else ok=kindsOf(groupsOf(cs[0])).includes(PKEY[q.pattern]);
   }else{
-    const ans=q.answers.map(parseS);
-    if(cs.length!==ans.length)head=`분자 ${ans.length}개가 필요해요. 지금은 ${cs.length}개예요. 서로 떨어진 분자는 따로 셉니다.`;
-    else{
-      const used=new Array(cs.length).fill(false);
+    const need=q.answers.length;
+    if(cs.length!==need)head=`분자 ${need}개가 필요해요. 지금은 ${cs.length}개예요. 서로 떨어진 분자는 따로 셉니다.`;
+    else ok=(q.alts||[q.answers]).some(set=>{
+      const ans=set.map(parseS),used=new Array(cs.length).fill(false);
       const match=k=>{if(k===ans.length)return true;for(let i=0;i<cs.length;i++){if(used[i]||!iso(ans[k],cs[i]))continue;used[i]=true;if(match(k+1))return true;used[i]=false}return false};
-      ok=match(0);
-    }
+      return match(0);
+    });
   }
   if(ok)return{ok:true};
   S.tries=(S.tries||0)+1;
