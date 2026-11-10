@@ -206,6 +206,9 @@ button{cursor:pointer}
 .rest li span{display:inline-block;min-width:0}
 .rest li span.mono{font-family:var(--f-mono);margin-left:8px;color:var(--muted)}
 .muted{color:var(--muted);margin:0}
+.clsrow{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.clssel{font-size:20px;font-weight:700;padding:8px 14px}
+.nosheet{border:2px solid var(--bad,#b3261e);border-radius:14px;padding:14px 18px;margin-bottom:16px;font-size:17px;line-height:1.5;background:var(--surface)}
 .sel2{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:0 10px;font-weight:700}
 #modal{position:fixed;inset:0;z-index:30;background:color-mix(in srgb,var(--ink) 55%,transparent);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 #modal .box{background:var(--surface);border-radius:18px;padding:20px;width:min(1200px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px}
@@ -244,8 +247,10 @@ button{cursor:pointer}
   </section>
 
   <section id="board" aria-label="전자칠판 문제판" hidden>
+    <div class="nosheet" id="noSheet" hidden><b>시트가 연결되지 않았어요.</b> 학생 제출과 순위가 이 화면에 들어오지 않습니다. GitHub 주소로 열었는지, config.js에 시트 주소가 들어 있는지 확인해 주세요. (Claude 대화창 미리보기에서는 항상 이렇게 보입니다.)</div>
     <div class="board">
       <div class="panel bq">
+        <div class="clsrow"><label class="eyebrow" for="bCls">학급</label><select class="sel2 clssel" id="bCls"></select></div>
         <div class="chips" id="bChips"></div>
         <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
           <div class="qno" id="bNo"></div>
@@ -272,7 +277,7 @@ button{cursor:pointer}
           <span class="eyebrow">경과 시간</span>
           <div class="timer" id="tDisp">0:00</div>
           <div class="limrow"><label class="eyebrow" for="bLimit">이 문제 제한 시간</label><select class="sel2" id="bLimit"></select></div>
-          <div class="brow">
+          <div class="brow" id="tRow">
             <button class="btn" id="tGo" type="button">시작</button>
             <button class="btn alt" id="tReset" type="button">처음부터</button>
           </div>
@@ -299,8 +304,7 @@ button{cursor:pointer}
         <div class="ghead">
           <h3>제출 현황 <span id="gQlabel" style="color:var(--accent)"></span></h3>
           <div class="brow" style="align-items:center">
-            <label class="eyebrow" for="bCls">학급</label><select class="sel2" id="bCls"></select>
-            <button class="ghost" id="newLesson" type="button">새 수업 시작</button>
+                        <button class="ghost" id="newLesson" type="button">새 수업 시작</button>
             <span class="sync" id="sync"></span>
           </div>
         </div>
@@ -385,12 +389,12 @@ const QS=[
  {tag:'작용기',title:'카복실산을 만들어라',given:'−COOH',body:'카복실기를 가진 물질을 아무거나 하나 만드세요.',pattern:'cooh',reveal:'예) HCOOH, CH₃COOH, C₂H₅COOH',note:'카복실산은 탄화수소의 탄소 원자에 수소 원자 대신 −COOH가 결합한 화합물입니다.'},
  {tag:'화합물',title:'에탄올',given:'C₂H₅OH',body:'포도주(술)의 주성분인 에탄올의 구조식을 만드세요.',answers:['CCO'],reveal:'CH₃CH₂OH (분자식 C₂H₆O, 시성식 C₂H₅OH)',note:'에탄올은 하이드록시기(−OH)를 가진 알코올입니다.'},
  {tag:'화합물',title:'아세트알데하이드',given:'CH₃CHO',body:'아세트알데하이드(에탄알)의 구조식을 만드세요.',answers:['CC=O'],reveal:'CH₃CHO (분자식 C₂H₄O)',note:'아세트알데하이드는 알데하이드기(−CHO)를 가진 알데하이드입니다. 에탄올과 탄소 수는 같지만 작용기가 다릅니다.'},
+ {tag:'심화 · 과학 이야기',title:'에스터를 만들어라',given:'−COO−',body:'에스터기를 가진 물질을 아무거나 하나 만드세요.',pattern:'coo',reveal:'예) CH₃COOCH₃, CH₃COOC₂H₅',note:'과일과 꽃의 향을 내는 물질은 대부분 에스터기(−COO−)를 가진 에스터입니다. (교과서 94쪽 과학 이야기)'},
+ {tag:'심화 · 과학 이야기',title:'바나나 향',given:'CH₃COOC₅H₁₁',body:'바나나 향을 내는 에스터의 구조식을 만드세요.',answers:['CC(=O)OCCC(C)C'],alts:[['CC(=O)OCCC(C)C'],['CC(=O)OCCCCC']],reveal:'CH₃COOCH₂CH₂CH(CH₃)₂ (아세트산 아이소아밀) 또는 CH₃COO(CH₂)₄CH₃ (아세트산 펜틸)',note:'교과서에는 CH₃COOC₅H₁₁로 나와 있습니다. −C₅H₁₁ 부분의 연결 모양이 다른 두 구조를 모두 정답으로 인정합니다.'},
  {tag:'산화',title:'에탄올이 한 번 산화되면?',given:'C₂H₅OH ─ 산화 → ?',body:'에탄올이 산화되어 생성되는 물질의 구조식을 만드세요.',answers:['CC=O'],reveal:'CH₃CHO (아세트알데하이드)',note:'알코올이 산화되면 −OH를 가진 탄소가 −CHO를 가진 알데하이드가 됩니다.'},
  {tag:'산화',title:'아세트알데하이드가 산화되면?',given:'CH₃CHO ─ 산화 → ?',body:'아세트알데하이드가 산화되어 생성되는 물질의 구조식을 만드세요.',answers:['CC(=O)O'],reveal:'CH₃COOH (아세트산)',note:'알데하이드가 산화되면 −COOH를 가진 카복실산이 됩니다. 포도주가 식초가 되는 까닭입니다.'},
  {tag:'산화',title:'메탄올의 산화',given:'CH₃OH ─ 산화 → (   ) ─ 산화 → (   )',body:'괄호에 들어갈 두 물질의 구조식을 모두 만드세요.',answers:['C=O','C(=O)O'],reveal:'HCHO (폼알데하이드) → HCOOH (폼산)',note:'메탄올도 에탄올처럼 알데하이드를 거쳐 카복실산으로 산화됩니다.'},
- {tag:'산화',title:'프로판올이 끝까지 산화되면?',given:'CH₃CH₂CH₂OH ─ 산화 → ─ 산화 → ?',body:'프로판올이 산화되어 최종적으로 생성되는 물질의 구조식을 만드세요.',answers:['CCC(=O)O'],reveal:'C₂H₅COOH (프로피온산)',note:'탄소 수는 그대로이고, −OH가 결합한 탄소가 −COOH로 바뀝니다.'},
- {tag:'심화 · 과학 이야기',title:'에스터를 만들어라',given:'−COO−',body:'에스터기를 가진 물질을 아무거나 하나 만드세요.',pattern:'coo',reveal:'예) CH₃COOCH₃, CH₃COOC₂H₅',note:'과일과 꽃의 향을 내는 물질은 대부분 에스터기(−COO−)를 가진 에스터입니다. (교과서 94쪽 과학 이야기)'},
- {tag:'심화 · 과학 이야기',title:'바나나 향',given:'CH₃COOC₅H₁₁',body:'바나나 향을 내는 에스터의 구조식을 만드세요.',answers:['CC(=O)OCCC(C)C'],alts:[['CC(=O)OCCC(C)C'],['CC(=O)OCCCCC']],reveal:'CH₃COOCH₂CH₂CH(CH₃)₂ (아세트산 아이소아밀) 또는 CH₃COO(CH₂)₄CH₃ (아세트산 펜틸)',note:'교과서에는 CH₃COOC₅H₁₁로 나와 있습니다. −C₅H₁₁ 부분의 연결 모양이 다른 두 구조를 모두 정답으로 인정합니다.'}
+ {tag:'산화',title:'프로판올이 끝까지 산화되면?',given:'CH₃CH₂CH₂OH ─ 산화 → ─ 산화 → ?',body:'프로판올이 산화되어 최종적으로 생성되는 물질의 구조식을 만드세요.',answers:['CCC(=O)O'],reveal:'C₂H₅COOH (프로피온산)',note:'탄소 수는 그대로이고, −OH가 결합한 탄소가 −COOH로 바뀝니다.'}
 ];
 const CODES=['418','263','905','137','752','386','624','591','870','349'];
 QS.forEach((q,i)=>q.code=CODES[i]);
@@ -488,9 +492,9 @@ window.addEventListener('hashchange',route);
 /* ===== 전자칠판 ===== */
 const B={cls:store.get('bc','1반'),q:store.get('bq',0),groups:store.get('bg',6),scores:store.get('bs',[0,0,0,0,0,0,0,0]),reveal:false,run:false,acc:0,t0:0};
 function chipRow(el,cur,fn){el.innerHTML='';QS.forEach((_,i)=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=i+1;b.setAttribute('aria-pressed',i===cur);b.onclick=()=>fn(i);el.appendChild(b)})}
-function setBQ(i){B.q=Math.max(0,Math.min(QS.length-1,i));B.reveal=false;store.set('bq',B.q);resetTimer();renderBoard();if(B.open)pushState()}
+function setBQ(i){B.q=Math.max(0,Math.min(QS.length-1,i));B.reveal=false;store.set('bq',B.q);resetTimer();if(B.open&&typeof toggleTimer==='function')toggleTimer();renderBoard();if(B.open)pushState()}
 /* 학생 화면에 문제 열기·닫기 (시트 연동 시) */
-B.open=false;B.showTot=false;B.limits=store.get('blim',{});
+B.open=false;B.showTot=false;B.limits=store.get('blim2',{});
 const limitOf=qi=>Number(B.limits[qi])||defaultLimit(qi);
 async function pushState(){
   if(!SHEET_API)return;const st=$('bOpenSt');
@@ -502,7 +506,7 @@ async function pushState(){
 function renderOpen(){
   const b=$('bOpen'),st=$('bOpenSt');if(!b)return;
   b.hidden=!SHEET_API;b.textContent=B.open?'학생 화면 닫기':'학생 화면에 열기';b.classList.toggle('live',B.open);
-  st.className='sent'+(B.open?' ok':'');st.textContent=SHEET_API?(B.open?`${B.cls} 학생 화면에 Q${B.q+1}이(가) 열려 있어요. 문제를 넘기면 학생 화면도 함께 넘어가요.`:`${B.cls} 학생 화면은 닫혀 있어요. 학생들은 조작 연습을 할 수 있어요.`):'';
+  st.className='sent'+(B.open?' ok':'');st.textContent=SHEET_API?(B.open?`${B.cls} 학생 화면에 Q${B.q+1}이(가) 열려 있어요. 시계가 함께 가고, 문제를 넘기면 학생 화면과 시계도 함께 넘어가요.`:`${B.cls} 학생 화면은 닫혀 있어요. 학생들은 조작 연습을 할 수 있어요.`):'';
 }
 function renderBoard(){
   const q=QS[B.q];chipRow($('bChips'),B.q,setBQ);
@@ -520,9 +524,9 @@ function renderBoard(){
   sc.querySelectorAll('.sbtn').forEach(b=>b.onclick=()=>{const g=+b.dataset.g;B.scores[g]=Math.max(0,B.scores[g]+ +b.dataset.d);store.set('bs',B.scores);renderBoard()});
   renderGallery();
 }
-$('bLimit').onchange=()=>{B.limits[B.q]=Number($('bLimit').value);store.set('blim',B.limits);if(B.open)pushState();renderBoard()};
+$('bLimit').onchange=()=>{B.limits[B.q]=Number($('bLimit').value);store.set('blim2',B.limits);if(B.open)pushState();renderBoard()};
 $('totToggle').onclick=()=>{B.showTot=!B.showTot;renderGallery()};
-$('bOpen').onclick=()=>{B.open=!B.open;pushState();renderOpen()};
+$('bOpen').onclick=()=>{B.open=!B.open;resetTimer();if(B.open)toggleTimer();pushState();renderOpen()};
 $('bReveal').onclick=()=>{B.reveal=!B.reveal;if(B.reveal&&B.run)toggleTimer();renderBoard()};
 $('bPrev').onclick=()=>setBQ(B.q-1);$('bNext').onclick=()=>setBQ(B.q+1);
 function elapsed(){return B.acc+(B.run?Date.now()-B.t0:0)}
@@ -569,7 +573,7 @@ function structSVG(st,inline){
 }
 const bCls=$('bCls');CLASSES.forEach(c=>bCls.insertAdjacentHTML('beforeend',`<option>${c}</option>`));bCls.value=B.cls;
 const G={rows:[],since:store.get('since',(()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})()),awarded:new Set(store.get('aw',[])),last:0,err:false,busy:false};
-bCls.onchange=()=>{if(B.open){B.open=false;pushState()}B.cls=bCls.value;store.set('bc',B.cls);G.rows=[];renderGallery();renderOpen();poll()};
+bCls.onchange=()=>{if(B.open){B.open=false;resetTimer();pushState()}B.cls=bCls.value;store.set('bc',B.cls);G.rows=[];renderGallery();renderOpen();poll()};
 async function poll(){
   if(!SHEET_API||$('board').hidden||document.hidden||G.busy)return;G.busy=true;
   try{
@@ -694,7 +698,7 @@ $('newLesson').onclick=()=>{
   lessonArm=setTimeout(()=>{lessonArm=null;$('newLesson').textContent='새 수업 시작'},3000);
 };
 setInterval(poll,3000);setInterval(renderSync,1000);
-if(!SHEET_API)document.querySelector('.gallery').hidden=true;
+$('noSheet').hidden=!!SHEET_API;$('tRow').hidden=!!SHEET_API;
 
 /* ===== 모둠 작업대 ===== */
 const COLS=12,ROWS=7,CELL=100;
@@ -1024,7 +1028,7 @@ function fbHTML(blocks,hint){
 
 /* --- 점수: 속도 점수(500~1000, 카훗 방식) × 시도 배율 --- */
 const MULT=[1,0.7,0.5,0.3];
-const defaultLimit=qi=>qi<6?120:qi<10?180:240;   /* Q1~Q6 2분, Q7~Q10 3분, 심화 4분 */
+const defaultLimit=qi=>qi<6?120:qi<8?240:180;   /* Q1~Q6 2분, Q7·Q8(심화) 4분, Q9~Q12(산화) 3분 */
 function pointsOf(sec,limit,attempt){
   const L=limit>0?limit:120,t=Math.max(0,Number(sec)||0);
   const speed=t<0.5?1000:Math.round(1000*(1-Math.min(t/L,1)/2));
