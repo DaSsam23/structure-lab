@@ -190,6 +190,14 @@ button{cursor:pointer}
 .acell b{font-size:clamp(20px,2.2vw,32px);font-weight:700;overflow-wrap:anywhere}
 .acell .mono{font-family:var(--f-mono)} .acell .cf{color:var(--ok)}
 .acell svg{width:100%;height:auto;display:block}
+.sqt{font-size:22px;font-weight:700}
+.gq .sqg{font-size:20px}
+#gAns{border-top:1.5px dashed var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.sans{display:flex;gap:14px;flex-wrap:wrap;font-weight:700;font-size:18px}
+.sans .mono{font-family:var(--f-mono)} .sans .cf{color:var(--ok)}
+#gAns svg{width:100%;height:auto;display:block}
+.cdown{font-family:var(--f-mono);font-weight:700;font-size:22px;color:var(--accent)}
+.cdown.warn{color:var(--bad)} .cdown.end{color:var(--muted)}
 .sel2{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:0 10px;font-weight:700}
 #modal{position:fixed;inset:0;z-index:30;background:color-mix(in srgb,var(--ink) 55%,transparent);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 #modal .box{background:var(--surface);border-radius:18px;padding:20px;width:min(1200px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px}
@@ -315,7 +323,9 @@ button{cursor:pointer}
         </div>
         <div class="gq" id="qView" hidden>
           <div class="qno" id="gNo"></div>
-          <p class="body">전자칠판의 문제를 보고 구조식을 만들어 제출하세요.</p>
+          <div class="cdown" id="gTime" hidden></div>
+          <div id="gQT"><p class="body">전자칠판의 문제를 보고 구조식을 만들어 제출하세요.</p></div>
+          <div id="gAns" hidden></div>
         </div>
         <div id="gResult" aria-live="polite"></div>
         <div class="sent" id="gSent" aria-live="polite"></div>
@@ -636,12 +646,12 @@ function renderGroupQ(){
   if(!hasMe)S.q=null;
   if(hasMe){$('who').textContent=meLabel();$('tally').textContent=`맞힌 문제 ${S.solved.size} / ${QS.length}`}
   const locked=S.q==null;
-  $('qView').hidden=locked;$('submit').disabled=locked;
+  $('qView').hidden=locked;$('submit').disabled=locked||!!S.cl;
   const qp=$('qPick');qp.innerHTML='';
   QS.forEach((_,i)=>{const b=document.createElement('button');b.type='button';b.className='key';b.textContent=i+1;if(S.solved.has(i+1))b.classList.add('done');b.setAttribute('aria-pressed',i===S.q);b.setAttribute('aria-label','문제 '+(i+1));
     if(i===S.q){b.style.background='var(--accent)';b.style.color='var(--surface)';b.style.borderColor='var(--accent)'}
     b.onclick=()=>{if(i!==S.q)setGQ(i)};qp.appendChild(b)});
-  if(!locked)$('gNo').textContent='Q'+(S.q+1);
+  if(!locked){$('gNo').textContent='Q'+(S.q+1);if(typeof renderQCard==='function')renderQCard()}
   if(typeof renderSide==='function')renderSide();
   const r=$('gResult');
   if(!S.result){r.innerHTML='';return}
@@ -1039,20 +1049,54 @@ function renderSide(){
   $('pracBox').hidden=nm||!S.prac;
   $('pracStart').hidden=nm||!!S.prac||S.q!=null;
   if(S.prac)renderPrac();
-  $('submit').disabled=nm||(S.q==null&&!S.prac);
+  $('submit').disabled=nm||(S.q==null&&!S.prac)||(!S.prac&&!!S.cl);
 }
 $('pracStart').onclick=()=>startPrac(0);
 $('pracSkip').onclick=()=>{try{store.set('pracDone',1)}catch(e){}stopPrac()};
-/* 교사가 연 문제를 3초마다 확인 */
-let lastOpen=-1;
+/* 학생 화면: 교사가 연 문제·정답 표시, 정답 공개 시 제출 마감, 접속 등록 */
+S.rev=false;S.cl=false;
+const grpOf=()=>('name' in S)?0:(Number(S.group)||0);
+let joinedKey='';
+async function join(){
+  if(!SYNC||needMe())return;const k=S.cls+'|'+grpOf()+'|'+(S.name||'');if(k===joinedKey)return;joinedKey=k;
+  try{const j=await (await fetch(SHEET_API,{method:'POST',body:JSON.stringify({action:'join',cls:S.cls,grp:grpOf(),name:S.name||''})})).json();if(!j.ok)joinedKey=''}catch(e){joinedKey=''}
+}
+function renderQCard(){
+  const t=$('gQT'),a=$('gAns');if(!t||S.q==null)return;const q=QS[S.q];
+  t.innerHTML=SYNC?`<div class="sqt">${esc(q.title)}</div><div class="given sqg">${esc(q.given)}</div><p class="body">${esc(q.body)}</p>`:'<p class="body">전자칠판의 문제를 보고 구조식을 만들어 제출하세요.</p>';
+  if(!(SYNC&&S.rev&&q.mol)){a.hidden=true;a.innerHTML='';return}
+  const s=structSVG(gridMol(q.mol),false);a.hidden=false;
+  a.innerHTML=`<div class="eyebrow">정답</div><div class="sans"><span>${esc(q.ansName||q.title)}</span><span class="mono">${esc(q.mf||q.given)}</span><span class="mono cf">${esc(q.cf)}</span></div><svg viewBox="${s.vb}" style="max-width:${Math.min(s.w*0.5,420)}px">${s.inner}</svg>`;
+}
+/* 교사가 연 문제를 3초마다 확인. 남은 시간은 구글 서버 시각 기준으로 계산 */
+let lastOpen=-1,lastRev='';S.deadline=0;S.off=0;S.srvCl=false;
 async function pollState(){
-  if(!SYNC||document.hidden||needMe())return;
-  try{const j=await (await fetch(SHEET_API+'?mode=state&cls='+encodeURIComponent(S.cls))).json();
-    S.limit=Number(j.limit)||0;const q=Number(j.q)||0;if(q===lastOpen)return;lastOpen=q;
-    if(q>0&&q<=QS.length){if(S.q!==q-1){S.prac=null;setGQ(q-1);setSent(`선생님이 Q${q}을(를) 열었어요.`,'ok')}}
-    else if(S.q!=null){S.q=null;S.result=null;renderGroupQ();setSent('선생님이 문제를 닫았어요. 잠시 기다리세요.','')}
+  if(!SYNC||document.hidden||needMe())return;join();
+  try{const t0=Date.now(),j=await (await fetch(SHEET_API+'?mode=state&cls='+encodeURIComponent(S.cls)+'&grp='+grpOf()+'&name='+encodeURIComponent(S.name||''))).json();
+    if(j.now)S.off=Number(j.now)-Math.round((t0+Date.now())/2);
+    S.limit=Number(j.limit)||0;const q=Number(j.q)||0,st=Number(j.start)||0,rv=(j.reveal?1:0)+''+(j.closed?1:0)+'|'+st+'|'+S.limit;
+    if(q===lastOpen&&rv===lastRev)return;lastOpen=q;lastRev=rv;
+    if(q>0&&q<=QS.length){
+      if(S.q!==q-1){S.prac=null;setGQ(q-1);setSent(`선생님이 Q${q}을(를) 열었어요.`,'ok')}
+      if(st)S.qStart=st-S.off;
+      S.deadline=st?st-S.off+(S.limit||defaultLimit(S.q))*1000:0;
+      S.rev=!!j.reveal;S.srvCl=!!j.closed;tickClock(true);renderGroupQ();
+    }
+    else{S.rev=false;S.cl=false;S.srvCl=false;S.deadline=0;if(S.q!=null){S.q=null;S.result=null;renderGroupQ();setSent('선생님이 문제를 닫았어요. 잠시 기다리세요.','')}}
   }catch(e){}
 }
+/* 남은 시간 표시와 자동 마감 */
+function tickClock(silent){
+  const el=$('gTime');if(!el)return;
+  if(!SYNC||S.q==null||!S.deadline){el.hidden=true;return}
+  const rem=Math.max(0,S.deadline-Date.now()),was=S.cl;
+  S.cl=S.srvCl||rem<=0;el.hidden=false;
+  const s=Math.ceil(rem/1000);
+  el.textContent=S.cl?(S.rev?'정답 공개 · 제출 마감':'제출 마감'):`남은 시간 ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  el.className='cdown'+(S.cl?' end':s<=10?' warn':'');
+  if(S.cl!==was){$('submit').disabled=S.cl||S.q==null;if(S.cl)setSent(S.rev?'정답이 공개되어 이 문제의 제출이 마감되었어요.':'제출이 마감되었어요. 선생님이 정답을 공개할 때까지 기다리세요.','');if(!silent)renderGroupQ()}
+}
+setInterval(()=>tickClock(false),250);
 if(SYNC){setInterval(pollState,3000);setTimeout(pollState,300)}
 
 /* --- 시트로 전송 --- */
@@ -1071,11 +1115,11 @@ async function send(r){
   setSent('선생님께 보내는 중…','');$('submit').disabled=true;
   const st=structOf();let img='';try{img=await structPNG(st)}catch(e){}
   const body={cls:S.cls,grp:0,name:S.name,q:S.q+1,ok:!!r.ok,sec:r.secx,limit:S.limit||defaultLimit(S.q),formula:groupsRaw().map(liveFormula).join(' + '),msg:r.ok?'':r.msg,struct:st,image:img};
-  try{const res=await fetch(SHEET_API,{method:'POST',body:JSON.stringify(body)});const j=await res.json();if(j.ok&&j.t){S.lastT=j.t;startFbPoll()}if(j.ok&&j.points!==undefined&&j.points!==''&&S.result&&S.result.ok){S.result.pts=j.points;S.result.att=j.attempt;S.result.prank=j.prank;renderGroupQ()}else if(j.ok&&j.points===''&&S.result&&S.result.ok){S.result.pts=null;renderGroupQ()}setSent(j.ok?('선생님께 전송됨 ✓'+''):'전송 실패 · 다시 제출해 주세요',j.ok?'ok':'bad')}
+  try{const res=await fetch(SHEET_API,{method:'POST',body:JSON.stringify(body)});const j=await res.json();if(j.ok&&j.t){S.lastT=j.t;startFbPoll()}if(j.ok&&j.points!==undefined&&j.points!==''&&S.result&&S.result.ok){S.result.pts=j.points;S.result.att=j.attempt;S.result.prank=j.prank;renderGroupQ()}else if(j.ok&&j.points===''&&S.result&&S.result.ok){S.result.pts=null;renderGroupQ()}setSent(j.ok?'선생님께 전송됨 ✓':(j.closed?'제출이 마감된 뒤라 기록되지 않았어요':'전송 실패 · 다시 제출해 주세요'),j.ok?'ok':'bad')}
   catch(e){setSent('전송을 확인하지 못했어요 · 인터넷 연결을 확인하세요','bad')}
-  setTimeout(()=>{$('submit').disabled=S.q==null},1200);
+  setTimeout(()=>{$('submit').disabled=S.q==null||!!S.cl},1200);
 }
-$('submit').onclick=()=>{if(S.prac){pracSubmit();return}if(S.q==null)return;const r=grade();r.secx=Math.round((Date.now()-S.qStart)/100)/10;r.sec=Math.max(1,Math.round(r.secx));S.att=(S.att||0)+1;r.att=S.att;if(r.ok)r.pts=pointsOf(r.secx,S.limit||defaultLimit(S.q),S.att);S.result=r;S.hl=r.hl||null;renderGrid();if(r.ok){S.solved.add(S.q+1);store.set('ps',[...S.solved])}renderGroupQ();if(S.atoms.size)send(r)};
+$('submit').onclick=()=>{if(S.prac){pracSubmit();return}if(S.q==null)return;if(S.cl){setSent('제출이 마감되었어요.','');return}const r=grade();r.secx=Math.round((Date.now()-S.qStart)/100)/10;r.sec=Math.max(1,Math.round(r.secx));S.att=(S.att||0)+1;r.att=S.att;if(r.ok)r.pts=pointsOf(r.secx,S.limit||defaultLimit(S.q),S.att);S.result=r;S.hl=r.hl||null;renderGrid();if(r.ok){S.solved.add(S.q+1);store.set('ps',[...S.solved])}renderGroupQ();if(S.atoms.size)send(r)};
 
 /* 시작 */
 renderBoard();renderGroupQ();renderGrid();route();

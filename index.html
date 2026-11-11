@@ -192,6 +192,11 @@ button{cursor:pointer}
 .steps2 li.done::marker{content:"✓  "}
 .btn.live{background:var(--accent);border-color:var(--accent)}
 .ptsline{font-family:var(--f-display);font-weight:400;font-size:24px;color:var(--ink)}
+.roster{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto}
+.rchip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:4px 10px;font-size:15px;background:var(--surface)}
+.rchip.ok{border-color:var(--ok);background:var(--ok-soft)} .rchip.bad{border-color:var(--bad);background:var(--bad-soft)}
+.rchip .dot{width:9px;height:9px;border-radius:50%;background:var(--line);display:inline-block}
+.rchip .dot.on{background:var(--ok)}
 .limrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .rankp{display:flex;flex-direction:column;gap:12px}
 .podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:end}
@@ -215,6 +220,14 @@ button{cursor:pointer}
 .acell b{font-size:clamp(20px,2.2vw,32px);font-weight:700;overflow-wrap:anywhere}
 .acell .mono{font-family:var(--f-mono)} .acell .cf{color:var(--ok)}
 .acell svg{width:100%;height:auto;display:block}
+.sqt{font-size:22px;font-weight:700}
+.gq .sqg{font-size:20px}
+#gAns{border-top:1.5px dashed var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.sans{display:flex;gap:14px;flex-wrap:wrap;font-weight:700;font-size:18px}
+.sans .mono{font-family:var(--f-mono)} .sans .cf{color:var(--ok)}
+#gAns svg{width:100%;height:auto;display:block}
+.cdown{font-family:var(--f-mono);font-weight:700;font-size:22px;color:var(--accent)}
+.cdown.warn{color:var(--bad)} .cdown.end{color:var(--muted)}
 .sel2{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:0 10px;font-weight:700}
 #modal{position:fixed;inset:0;z-index:30;background:color-mix(in srgb,var(--ink) 55%,transparent);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 #modal .box{background:var(--surface);border-radius:18px;padding:20px;width:min(1200px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px}
@@ -281,9 +294,10 @@ button{cursor:pointer}
       </div>
       <div class="side">
         <div class="panel" style="display:flex;flex-direction:column;gap:12px">
-          <span class="eyebrow">경과 시간</span>
+          <span class="eyebrow" id="tLabel">경과 시간</span>
           <div class="timer" id="tDisp">0:00</div>
-          <div class="limrow"><label class="eyebrow" for="bLimit">이 문제 제한 시간</label><select class="sel2" id="bLimit"></select></div>
+          <div class="limrow"><label class="eyebrow" for="bLimit">이 문제 제한 시간</label><select class="sel2" id="bLimit"></select><button class="ghost" id="tPlus" type="button" hidden>+30초</button></div>
+          <div class="fbh" id="tRule">시간이 끝나거나, 접속 중인 학생 모두가 정답을 맞히거나 두 번 제출하면 자동으로 마감됩니다.</div>
           <div class="brow" id="tRow">
             <button class="btn" id="tGo" type="button">시작</button>
             <button class="btn alt" id="tReset" type="button">처음부터</button>
@@ -296,6 +310,10 @@ button{cursor:pointer}
           </div>
           <div class="score" id="scores"></div>
           <button class="ghost" id="sReset" type="button">점수 초기화</button>
+        </div>
+        <div class="panel rankp" id="rosPanel" hidden>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><span class="eyebrow" id="rosTitle">접속 현황</span><span class="pmeta" id="rosCount"></span></div>
+          <div class="roster" id="rosBody"></div>
         </div>
         <div class="panel rankp" id="qrPanel">
           <span class="eyebrow" id="qrTitle">이번 문제 순위</span>
@@ -346,7 +364,9 @@ button{cursor:pointer}
         </div>
         <div class="gq" id="qView" hidden>
           <div class="qno" id="gNo"></div>
-          <p class="body">전자칠판의 문제를 보고 구조식을 만들어 제출하세요.</p>
+          <div class="cdown" id="gTime" hidden></div>
+          <div id="gQT"><p class="body">전자칠판의 문제를 보고 구조식을 만들어 제출하세요.</p></div>
+          <div id="gAns" hidden></div>
         </div>
         <div id="gResult" aria-live="polite"></div>
         <div class="sent" id="gSent" aria-live="polite"></div>
@@ -501,13 +521,16 @@ window.addEventListener('hashchange',route);
 /* ===== 전자칠판 ===== */
 const B={cls:store.get('bc','1반'),q:store.get('bq',0),groups:store.get('bg',6),scores:store.get('bs',[0,0,0,0,0,0,0,0]),reveal:false,run:false,acc:0,t0:0};
 function chipRow(el,cur,fn){el.innerHTML='';QS.forEach((_,i)=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=i+1;b.setAttribute('aria-pressed',i===cur);b.onclick=()=>fn(i);el.appendChild(b)})}
-function setBQ(i){B.q=Math.max(0,Math.min(QS.length-1,i));B.reveal=false;store.set('bq',B.q);resetTimer();if(B.open&&typeof toggleTimer==='function')toggleTimer();renderBoard();if(B.open)pushState()}
+function setBQ(i){B.q=Math.max(0,Math.min(QS.length-1,i));B.reveal=false;B.bonus=0;B.why='';store.set('bq',B.q);resetTimer();if(B.open&&typeof toggleTimer==='function')toggleTimer();renderBoard();if(B.open)pushState(true)}
 /* 학생 화면에 문제 열기·닫기 (시트 연동 시) */
-B.open=false;B.showTot=false;B.limits=store.get('blim2',{});
+B.open=false;B.showTot=false;B.bonus=0;B.why='';B.closed=store.get('bclosed',{});
+const isClosed=qi=>(B.closed[B.cls]||[]).includes(qi);
+function markClosed(qi){const a=B.closed[B.cls]||[];if(!a.includes(qi))a.push(qi);B.closed[B.cls]=a;store.set('bclosed',B.closed)}
+B.limits=store.get('blim2',{});
 const limitOf=qi=>Number(B.limits[qi])||defaultLimit(qi);
-async function pushState(){
+async function pushState(fresh){
   if(!SHEET_API)return;const st=$('bOpenSt');
-  try{const j=await (await fetch(SHEET_API,{method:'POST',body:JSON.stringify({action:'state',cls:B.cls,q:B.open?B.q+1:0,limit:limitOf(B.q)})})).json();
+  try{const j=await (await fetch(SHEET_API,{method:'POST',body:JSON.stringify({action:'state',cls:B.cls,q:B.open?B.q+1:0,limit:limitOf(B.q)+B.bonus,reveal:B.open&&B.reveal,closed:B.open&&isClosed(B.q),fresh:!!fresh})})).json();
     if(!j.ok){st.className='sent bad';st.textContent='학생 화면에 전달하지 못했어요. 다시 눌러 주세요.';return}}
   catch(e){st.className='sent bad';st.textContent='인터넷 연결을 확인하세요.';return}
   renderOpen();
@@ -515,7 +538,7 @@ async function pushState(){
 function renderOpen(){
   const b=$('bOpen'),st=$('bOpenSt');if(!b)return;
   b.hidden=!SHEET_API;b.textContent=B.open?'학생 화면 닫기':'학생 화면에 열기';b.classList.toggle('live',B.open);
-  st.className='sent'+(B.open?' ok':'');st.textContent=SHEET_API?(B.open?`${B.cls} 학생 화면에 Q${B.q+1}이(가) 열려 있어요. 시계가 함께 가고, 문제를 넘기면 학생 화면과 시계도 함께 넘어가요.`:`${B.cls} 학생 화면은 닫혀 있어요. 학생들은 조작 연습을 할 수 있어요.`):'';
+  st.className='sent'+(B.open?' ok':'');st.textContent=SHEET_API?(B.open?`${isClosed(B.q)?'[제출 마감'+(B.why?' · '+B.why:'')+'] ':''}${B.cls} 학생 화면에 Q${B.q+1}이(가) 열려 있어요. 시계가 함께 가고, 문제를 넘기면 학생 화면과 시계도 함께 넘어가요.`:`${B.cls} 학생 화면은 닫혀 있어요. 학생들은 조작 연습을 할 수 있어요.`):'';
 }
 /* 정답 공개: 이름 | 분자식 | 시성식 | 구조식 (교과서 표 Ⅲ-3 형식) */
 function gridMol(rows){
@@ -551,15 +574,25 @@ function renderBoard(){
 }
 $('bLimit').onchange=()=>{B.limits[B.q]=Number($('bLimit').value);store.set('blim2',B.limits);if(B.open)pushState();renderBoard()};
 $('totToggle').onclick=()=>{B.showTot=!B.showTot;renderGallery()};
-$('bOpen').onclick=()=>{B.open=!B.open;resetTimer();if(B.open)toggleTimer();pushState();renderOpen()};
-$('bReveal').onclick=()=>{B.reveal=!B.reveal;if(B.reveal&&B.run)toggleTimer();renderBoard()};
+$('bOpen').onclick=()=>{B.open=!B.open;B.bonus=0;resetTimer();if(B.open)toggleTimer();pushState(B.open);renderOpen()};
+$('bReveal').onclick=()=>{B.reveal=!B.reveal;if(B.reveal){if(!isClosed(B.q))B.why='정답 공개';markClosed(B.q);if(B.run)toggleTimer()}renderBoard();if(B.open)pushState()};
 $('bPrev').onclick=()=>setBQ(B.q-1);$('bNext').onclick=()=>setBQ(B.q+1);
 function elapsed(){return B.acc+(B.run?Date.now()-B.t0:0)}
 function fmt(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
 function toggleTimer(){if(B.run){B.acc+=Date.now()-B.t0;B.run=false}else{B.t0=Date.now();B.run=true}$('tGo').textContent=B.run?'멈춤':'시작'}
 function resetTimer(){B.run=false;B.acc=0;$('tGo').textContent='시작';$('tDisp').textContent='0:00'}
 $('tGo').onclick=toggleTimer;$('tReset').onclick=resetTimer;
-setInterval(()=>{if(B.run)$('tDisp').textContent=fmt(elapsed())},250);
+/* 학생 화면이 열려 있으면 남은 시간을 거꾸로 세고, 0이 되면 자동 마감 */
+function autoClose(why){if(!B.open||isClosed(B.q))return;markClosed(B.q);B.why=why;if(B.run)toggleTimer();pushState();renderOpen()}
+function unmarkClosed(qi){B.closed[B.cls]=(B.closed[B.cls]||[]).filter(x=>x!==qi);store.set('bclosed',B.closed)}
+$('tPlus').onclick=()=>{B.bonus+=30;if(isClosed(B.q)&&!B.reveal){unmarkClosed(B.q);B.why='';if(!B.run)toggleTimer()}pushState();renderOpen()};
+setInterval(()=>{
+  const live=B.open&&!!SHEET_API;$('tLabel').textContent=live?'남은 시간':'경과 시간';$('tPlus').hidden=!live;
+  if(live){const rem=Math.max(0,(limitOf(B.q)+B.bonus)*1000-elapsed());
+    $('tDisp').textContent=isClosed(B.q)?'마감':fmt(rem+999);$('tDisp').style.color=isClosed(B.q)?'var(--muted)':rem<=10000?'var(--bad)':'';
+    if(rem<=0)autoClose('시간 종료');}
+  else{$('tDisp').style.color='';if(B.run)$('tDisp').textContent=fmt(elapsed())}
+},250);
 let resetArm=null;
 $('sReset').onclick=()=>{
   if(resetArm){clearTimeout(resetArm);resetArm=null;B.scores=[0,0,0,0,0,0,0,0];store.set('bs',B.scores);$('sReset').textContent='점수 초기화';renderBoard();return}
@@ -598,7 +631,7 @@ function structSVG(st,inline){
 }
 const bCls=$('bCls');CLASSES.forEach(c=>bCls.insertAdjacentHTML('beforeend',`<option>${c}</option>`));bCls.value=B.cls;
 const G={rows:[],since:store.get('since',(()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()})()),awarded:new Set(store.get('aw',[])),last:0,err:false,busy:false};
-bCls.onchange=()=>{if(B.open){B.open=false;resetTimer();pushState()}B.cls=bCls.value;store.set('bc',B.cls);G.rows=[];renderGallery();renderOpen();poll()};
+bCls.onchange=()=>{if(B.open){B.open=false;resetTimer();pushState()}B.cls=bCls.value;store.set('bc',B.cls);G.rows=[];R.list=[];renderGallery();renderOpen();poll();pollRoster()};
 async function poll(){
   if(!SHEET_API||$('board').hidden||document.hidden||G.busy)return;G.busy=true;
   try{
@@ -665,7 +698,7 @@ function renderGallery(){
   const el=$('cards');if(!el)return;const q=B.q+1;$('gQlabel').textContent='· '+B.cls+' · Q'+q;
   const grpMode=GROUP_CLASSES.includes(B.cls);
   el.hidden=!grpMode;$('scorePanel').hidden=true;
-  renderRankings(q);
+  renderRankings(q);if(typeof renderRoster==='function')renderRoster();
   if(!grpMode){renderOrder(q);renderSync();return}
   let h='';
   for(let g=1;g<=B.groups;g++){
@@ -718,11 +751,33 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')$('modal').hidden=tr
 let lessonArm=null;
 $('newLesson').onclick=()=>{
   if(lessonArm){clearTimeout(lessonArm);lessonArm=null;G.since=Date.now();G.awarded=new Set();G.rows=[];B.scores=[0,0,0,0,0,0,0,0];
-    store.set('since',G.since);store.set('aw',[]);store.set('bs',B.scores);$('newLesson').textContent='새 수업 시작';renderBoard();return}
+    store.set('since',G.since);store.set('aw',[]);store.set('bs',B.scores);B.closed[B.cls]=[];store.set('bclosed',B.closed);R.list=[];$('newLesson').textContent='새 수업 시작';renderBoard();pollRoster();return}
   $('newLesson').textContent='한 번 더 누르면 갤러리와 점수를 비웁니다';
   lessonArm=setTimeout(()=>{lessonArm=null;$('newLesson').textContent='새 수업 시작'},3000);
 };
 setInterval(poll,3000);setInterval(renderSync,1000);
+/* 접속 현황: 학생이 이름(모둠)을 등록하면 목록에 나타나고, 15초 안에 신호가 있으면 접속 중으로 표시 */
+var R={list:[],now:0,busy:false};
+async function pollRoster(){
+  if(!SHEET_API||$('board').hidden||document.hidden||R.busy)return;R.busy=true;
+  try{const j=await (await fetch(SHEET_API+'?mode=roster&cls='+encodeURIComponent(B.cls)+'&since='+G.since)).json();R.list=Array.isArray(j.list)?j.list:[];R.now=Number(j.now)||Date.now();renderRoster()}catch(e){}
+  R.busy=false;
+}
+function renderRoster(){
+  const p=$('rosPanel');if(!p)return;p.hidden=!SHEET_API;if(!SHEET_API)return;
+  const q=B.q+1,st=new Map(),unit=GROUP_CLASSES.includes(B.cls)?'모둠':'명';
+  G.rows.filter(r=>r.q===q).forEach(r=>{const k=(Number(r.grp)||0)+'|'+(r.name||'');if(r.ok)st.set(k,'ok');else if(!st.get(k))st.set(k,'bad')});
+  const L=R.list.slice().sort((a,b)=>(a.grp-b.grp)||String(a.name).localeCompare(String(b.name),'ko'));
+  const cnt=new Map();G.rows.filter(r=>r.q===q).forEach(r=>{const k=(Number(r.grp)||0)+'|'+(r.name||'');cnt.set(k,(cnt.get(k)||0)+1)});
+  const live=x=>R.now-Number(x.seen||0)<15000,on=L.filter(live).length,okN=L.filter(x=>st.get((Number(x.grp)||0)+'|'+(x.name||''))==='ok').length;
+  const doneK=k=>st.get(k)==='ok'||(cnt.get(k)||0)>=2,onL=L.filter(live);
+  if(B.open&&onL.length&&onL.every(x=>doneK((Number(x.grp)||0)+'|'+(x.name||''))))autoClose('모두 제출');
+  $('rosTitle').textContent='접속 현황 · '+B.cls;
+  $('rosCount').textContent=`등록 ${L.length}${unit} · 접속 중 ${on}${unit} · Q${q} 정답 ${okN}${unit}`;
+  $('rosBody').innerHTML=L.length?L.map(x=>{const k=(Number(x.grp)||0)+'|'+(x.name||''),s=st.get(k),o=live(x);
+    return `<span class="rchip ${s||''}" title="${o?'접속 중':'최근 신호 없음'}"><i class="dot ${o?'on':''}"></i>${esc(x.name||(x.grp+'모둠'))}${s==='ok'?' ✓':s==='bad'?' ✗':''}</span>`}).join(''):'<p class="muted">아직 들어온 학생이 없습니다.</p>';
+}
+setInterval(pollRoster,5000);setTimeout(pollRoster,500);
 $('noSheet').hidden=!!SHEET_API;$('tRow').hidden=!!SHEET_API;
 
 /* ===== 모둠 작업대 ===== */
@@ -740,12 +795,12 @@ function setGQ(i){setSent('','');S.tries=0;S.hl=null;S.lastT=0;S.tfbShown='';ren
 
 function renderGroupQ(){
   const locked=S.q==null;
-  $('qView').hidden=locked;$('submit').disabled=locked;
+  $('qView').hidden=locked;$('submit').disabled=locked||!!S.cl;
   const qp=$('qPick');qp.innerHTML='';
   QS.forEach((_,i)=>{const b=document.createElement('button');b.type='button';b.className='key';b.textContent=i+1;b.setAttribute('aria-pressed',i===S.q);b.setAttribute('aria-label','문제 '+(i+1));
     if(i===S.q){b.style.background='var(--accent)';b.style.color='var(--surface)';b.style.borderColor='var(--accent)'}
     b.onclick=()=>{if(i!==S.q)setGQ(i)};qp.appendChild(b)});
-  if(!locked)$('gNo').textContent='Q'+(S.q+1);
+  if(!locked){$('gNo').textContent='Q'+(S.q+1);if(typeof renderQCard==='function')renderQCard()}
   if(typeof renderSide==='function')renderSide();
   const r=$('gResult');
   if(!S.result){r.innerHTML='';return}
@@ -1143,20 +1198,54 @@ function renderSide(){
   $('pracBox').hidden=nm||!S.prac;
   $('pracStart').hidden=nm||!!S.prac||S.q!=null;
   if(S.prac)renderPrac();
-  $('submit').disabled=nm||(S.q==null&&!S.prac);
+  $('submit').disabled=nm||(S.q==null&&!S.prac)||(!S.prac&&!!S.cl);
 }
 $('pracStart').onclick=()=>startPrac(0);
 $('pracSkip').onclick=()=>{try{store.set('pracDone',1)}catch(e){}stopPrac()};
-/* 교사가 연 문제를 3초마다 확인 */
-let lastOpen=-1;
+/* 학생 화면: 교사가 연 문제·정답 표시, 정답 공개 시 제출 마감, 접속 등록 */
+S.rev=false;S.cl=false;
+const grpOf=()=>('name' in S)?0:(Number(S.group)||0);
+let joinedKey='';
+async function join(){
+  if(!SYNC||needMe())return;const k=S.cls+'|'+grpOf()+'|'+(S.name||'');if(k===joinedKey)return;joinedKey=k;
+  try{const j=await (await fetch(SHEET_API,{method:'POST',body:JSON.stringify({action:'join',cls:S.cls,grp:grpOf(),name:S.name||''})})).json();if(!j.ok)joinedKey=''}catch(e){joinedKey=''}
+}
+function renderQCard(){
+  const t=$('gQT'),a=$('gAns');if(!t||S.q==null)return;const q=QS[S.q];
+  t.innerHTML=SYNC?`<div class="sqt">${esc(q.title)}</div><div class="given sqg">${esc(q.given)}</div><p class="body">${esc(q.body)}</p>`:'<p class="body">전자칠판의 문제를 보고 구조식을 만들어 제출하세요.</p>';
+  if(!(SYNC&&S.rev&&q.mol)){a.hidden=true;a.innerHTML='';return}
+  const s=structSVG(gridMol(q.mol),false);a.hidden=false;
+  a.innerHTML=`<div class="eyebrow">정답</div><div class="sans"><span>${esc(q.ansName||q.title)}</span><span class="mono">${esc(q.mf||q.given)}</span><span class="mono cf">${esc(q.cf)}</span></div><svg viewBox="${s.vb}" style="max-width:${Math.min(s.w*0.5,420)}px">${s.inner}</svg>`;
+}
+/* 교사가 연 문제를 3초마다 확인. 남은 시간은 구글 서버 시각 기준으로 계산 */
+let lastOpen=-1,lastRev='';S.deadline=0;S.off=0;S.srvCl=false;
 async function pollState(){
-  if(!SYNC||document.hidden||needMe())return;
-  try{const j=await (await fetch(SHEET_API+'?mode=state&cls='+encodeURIComponent(S.cls))).json();
-    S.limit=Number(j.limit)||0;const q=Number(j.q)||0;if(q===lastOpen)return;lastOpen=q;
-    if(q>0&&q<=QS.length){if(S.q!==q-1){S.prac=null;setGQ(q-1);setSent(`선생님이 Q${q}을(를) 열었어요.`,'ok')}}
-    else if(S.q!=null){S.q=null;S.result=null;renderGroupQ();setSent('선생님이 문제를 닫았어요. 잠시 기다리세요.','')}
+  if(!SYNC||document.hidden||needMe())return;join();
+  try{const t0=Date.now(),j=await (await fetch(SHEET_API+'?mode=state&cls='+encodeURIComponent(S.cls)+'&grp='+grpOf()+'&name='+encodeURIComponent(S.name||''))).json();
+    if(j.now)S.off=Number(j.now)-Math.round((t0+Date.now())/2);
+    S.limit=Number(j.limit)||0;const q=Number(j.q)||0,st=Number(j.start)||0,rv=(j.reveal?1:0)+''+(j.closed?1:0)+'|'+st+'|'+S.limit;
+    if(q===lastOpen&&rv===lastRev)return;lastOpen=q;lastRev=rv;
+    if(q>0&&q<=QS.length){
+      if(S.q!==q-1){S.prac=null;setGQ(q-1);setSent(`선생님이 Q${q}을(를) 열었어요.`,'ok')}
+      if(st)S.qStart=st-S.off;
+      S.deadline=st?st-S.off+(S.limit||defaultLimit(S.q))*1000:0;
+      S.rev=!!j.reveal;S.srvCl=!!j.closed;tickClock(true);renderGroupQ();
+    }
+    else{S.rev=false;S.cl=false;S.srvCl=false;S.deadline=0;if(S.q!=null){S.q=null;S.result=null;renderGroupQ();setSent('선생님이 문제를 닫았어요. 잠시 기다리세요.','')}}
   }catch(e){}
 }
+/* 남은 시간 표시와 자동 마감 */
+function tickClock(silent){
+  const el=$('gTime');if(!el)return;
+  if(!SYNC||S.q==null||!S.deadline){el.hidden=true;return}
+  const rem=Math.max(0,S.deadline-Date.now()),was=S.cl;
+  S.cl=S.srvCl||rem<=0;el.hidden=false;
+  const s=Math.ceil(rem/1000);
+  el.textContent=S.cl?(S.rev?'정답 공개 · 제출 마감':'제출 마감'):`남은 시간 ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  el.className='cdown'+(S.cl?' end':s<=10?' warn':'');
+  if(S.cl!==was){$('submit').disabled=S.cl||S.q==null;if(S.cl)setSent(S.rev?'정답이 공개되어 이 문제의 제출이 마감되었어요.':'제출이 마감되었어요. 선생님이 정답을 공개할 때까지 기다리세요.','');if(!silent)renderGroupQ()}
+}
+setInterval(()=>tickClock(false),250);
 if(SYNC){setInterval(pollState,3000);setTimeout(pollState,300)}
 
 /* --- 시트로 전송 --- */
@@ -1175,11 +1264,11 @@ async function send(r){
   setSent('선생님께 보내는 중…','');$('submit').disabled=true;
   const st=structOf();let img='';try{img=await structPNG(st)}catch(e){}
   const body={cls:S.cls,grp:S.group,q:S.q+1,ok:!!r.ok,sec:r.secx,limit:S.limit||defaultLimit(S.q),formula:groupsRaw().map(liveFormula).join(' + '),msg:r.ok?'':r.msg,struct:st,image:img};
-  try{const res=await fetch(SHEET_API,{method:'POST',body:JSON.stringify(body)});const j=await res.json();if(j.ok&&j.t){S.lastT=j.t;startFbPoll()}if(j.ok&&j.points!==undefined&&j.points!==''&&S.result&&S.result.ok){S.result.pts=j.points;S.result.att=j.attempt;S.result.prank=j.prank;renderGroupQ()}else if(j.ok&&j.points===''&&S.result&&S.result.ok){S.result.pts=null;renderGroupQ()}setSent(j.ok?('선생님께 전송됨 ✓'+''):'전송 실패 · 다시 제출해 주세요',j.ok?'ok':'bad')}
+  try{const res=await fetch(SHEET_API,{method:'POST',body:JSON.stringify(body)});const j=await res.json();if(j.ok&&j.t){S.lastT=j.t;startFbPoll()}if(j.ok&&j.points!==undefined&&j.points!==''&&S.result&&S.result.ok){S.result.pts=j.points;S.result.att=j.attempt;S.result.prank=j.prank;renderGroupQ()}else if(j.ok&&j.points===''&&S.result&&S.result.ok){S.result.pts=null;renderGroupQ()}setSent(j.ok?'선생님께 전송됨 ✓':(j.closed?'제출이 마감된 뒤라 기록되지 않았어요':'전송 실패 · 다시 제출해 주세요'),j.ok?'ok':'bad')}
   catch(e){setSent('전송을 확인하지 못했어요 · 인터넷 연결을 확인하세요','bad')}
-  setTimeout(()=>{$('submit').disabled=S.q==null},1200);
+  setTimeout(()=>{$('submit').disabled=S.q==null||!!S.cl},1200);
 }
-$('submit').onclick=()=>{if(S.prac){pracSubmit();return}if(S.q==null)return;const r=grade();r.secx=Math.round((Date.now()-S.qStart)/100)/10;r.sec=Math.max(1,Math.round(r.secx));S.att=(S.att||0)+1;r.att=S.att;if(r.ok)r.pts=pointsOf(r.secx,S.limit||defaultLimit(S.q),S.att);S.result=r;S.hl=r.hl||null;renderGrid();renderGroupQ();if(S.atoms.size)send(r)};
+$('submit').onclick=()=>{if(S.prac){pracSubmit();return}if(S.q==null)return;if(S.cl){setSent('제출이 마감되었어요.','');return}const r=grade();r.secx=Math.round((Date.now()-S.qStart)/100)/10;r.sec=Math.max(1,Math.round(r.secx));S.att=(S.att||0)+1;r.att=S.att;if(r.ok)r.pts=pointsOf(r.secx,S.limit||defaultLimit(S.q),S.att);S.result=r;S.hl=r.hl||null;renderGrid();renderGroupQ();if(S.atoms.size)send(r)};
 
 /* 시작 */
 renderBoard();renderGroupQ();renderGrid();route();
