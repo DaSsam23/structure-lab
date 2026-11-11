@@ -184,6 +184,12 @@ button{cursor:pointer}
 .steps2 li.done::marker{content:"✓  "}
 .btn.live{background:var(--accent);border-color:var(--accent)}
 .ptsline{font-family:var(--f-display);font-weight:400;font-size:24px;color:var(--ink)}
+.ansrow{display:grid;grid-template-columns:repeat(3,auto);justify-content:start;gap:10px 28px;align-items:end}
+.acell.wide{grid-column:1/-1}
+.acell{display:flex;flex-direction:column;gap:4px;min-width:0}
+.acell b{font-size:clamp(20px,2.2vw,32px);font-weight:700;overflow-wrap:anywhere}
+.acell .mono{font-family:var(--f-mono)} .acell .cf{color:var(--ok)}
+.acell svg{width:100%;height:auto;display:block}
 .sel2{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:0 10px;font-weight:700}
 #modal{position:fixed;inset:0;z-index:30;background:color-mix(in srgb,var(--ink) 55%,transparent);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 #modal .box{background:var(--surface);border-radius:18px;padding:20px;width:min(1200px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px}
@@ -239,6 +245,7 @@ button{cursor:pointer}
         </div>
         <div class="reveal" id="bAns" hidden>
           <span class="eyebrow">정답</span>
+          <div class="ansrow" id="bAnsRow"></div>
           <div class="given" id="bAnsF"></div>
           <p id="bAnsN"></p>
         </div>
@@ -352,18 +359,18 @@ const SHEET_API = String(window.SHEET_API_URL || '').trim();
 
 /* ===== 문제 데이터 (정답은 간이 SMILES: C,N,O / = 이중결합 / () 가지, H는 원자가로 계산) ===== */
 const QS=[
- {tag:'탄화수소',title:'프로페인',given:'C₃H₈',body:'탄소 원자 3개로 이루어진 탄화수소인 프로페인의 구조식을 만드세요.',answers:['CCC'],reveal:'CH₃CH₂CH₃ (C₃H₈)',note:'탄화수소는 탄소(C)와 수소(H)로만 이루어진 탄소 화합물입니다. 탄소 원자는 최대 4개까지 공유 결합을 합니다.'},
- {tag:'작용기',title:'알코올을 만들어라',given:'−OH',body:'하이드록시기를 가진 물질을 아무거나 하나 만드세요.',pattern:'oh',reveal:'예) CH₃OH, C₂H₅OH, C₃H₇OH',note:'알코올은 탄화수소의 탄소 원자에 수소 원자 대신 −OH가 결합한 화합물입니다. 모둠(학생)마다 다른 답을 비교해 공통 구조를 찾아보세요.'},
- {tag:'작용기',title:'알데하이드를 만들어라',given:'−CHO',body:'알데하이드기를 가진 물질을 아무거나 하나 만드세요.',pattern:'cho',reveal:'예) HCHO, CH₃CHO, C₂H₅CHO',note:'알데하이드는 탄화수소의 탄소 원자에 수소 원자 대신 −CHO가 결합한 화합물입니다.'},
- {tag:'작용기',title:'카복실산을 만들어라',given:'−COOH',body:'카복실기를 가진 물질을 아무거나 하나 만드세요.',pattern:'cooh',reveal:'예) HCOOH, CH₃COOH, C₂H₅COOH',note:'카복실산은 탄화수소의 탄소 원자에 수소 원자 대신 −COOH가 결합한 화합물입니다.'},
- {tag:'화합물',title:'에탄올',given:'C₂H₅OH',body:'포도주(술)의 주성분인 에탄올의 구조식을 만드세요.',answers:['CCO'],reveal:'CH₃CH₂OH (분자식 C₂H₆O, 시성식 C₂H₅OH)',note:'에탄올은 하이드록시기(−OH)를 가진 알코올입니다.'},
- {tag:'화합물',title:'아세트알데하이드',given:'CH₃CHO',body:'아세트알데하이드(에탄알)의 구조식을 만드세요.',answers:['CC=O'],reveal:'CH₃CHO (분자식 C₂H₄O)',note:'아세트알데하이드는 알데하이드기(−CHO)를 가진 알데하이드입니다. 에탄올과 탄소 수는 같지만 작용기가 다릅니다.'},
- {tag:'심화 · 과학 이야기',title:'에스터를 만들어라',given:'−COO−',body:'에스터기를 가진 물질을 아무거나 하나 만드세요.',pattern:'coo',reveal:'예) CH₃COOCH₃, CH₃COOC₂H₅',note:'과일과 꽃의 향을 내는 물질은 대부분 에스터기(−COO−)를 가진 에스터입니다. (교과서 94쪽 과학 이야기)'},
- {tag:'심화 · 과학 이야기',title:'바나나 향',given:'CH₃COOC₅H₁₁',body:'바나나 향을 내는 에스터의 구조식을 만드세요.',answers:['CC(=O)OCCC(C)C'],alts:[['CC(=O)OCCC(C)C'],['CC(=O)OCCCCC']],reveal:'CH₃COOCH₂CH₂CH(CH₃)₂ (아세트산 아이소아밀) 또는 CH₃COO(CH₂)₄CH₃ (아세트산 펜틸)',note:'교과서에는 CH₃COOC₅H₁₁로 나와 있습니다. −C₅H₁₁ 부분의 연결 모양이 다른 두 구조를 모두 정답으로 인정합니다.'},
- {tag:'산화',title:'에탄올이 한 번 산화되면?',given:'C₂H₅OH ─ 산화 → ?',body:'에탄올이 산화되어 생성되는 물질의 구조식을 만드세요.',answers:['CC=O'],reveal:'CH₃CHO (아세트알데하이드)',note:'알코올이 산화되면 −OH를 가진 탄소가 −CHO를 가진 알데하이드가 됩니다.'},
- {tag:'산화',title:'아세트알데하이드가 산화되면?',given:'CH₃CHO ─ 산화 → ?',body:'아세트알데하이드가 산화되어 생성되는 물질의 구조식을 만드세요.',answers:['CC(=O)O'],reveal:'CH₃COOH (아세트산)',note:'알데하이드가 산화되면 −COOH를 가진 카복실산이 됩니다. 포도주가 식초가 되는 까닭입니다.'},
- {tag:'산화',title:'메탄올의 산화',given:'CH₃OH ─ 산화 → (   ) ─ 산화 → (   )',body:'괄호에 들어갈 두 물질의 구조식을 모두 만드세요.',answers:['C=O','C(=O)O'],reveal:'HCHO (폼알데하이드) → HCOOH (폼산)',note:'메탄올도 에탄올처럼 알데하이드를 거쳐 카복실산으로 산화됩니다.'},
- {tag:'산화',title:'프로판올이 끝까지 산화되면?',given:'CH₃CH₂CH₂OH ─ 산화 → ─ 산화 → ?',body:'프로판올이 산화되어 최종적으로 생성되는 물질의 구조식을 만드세요.',answers:['CCC(=O)O'],reveal:'C₂H₅COOH (프로피온산)',note:'탄소 수는 그대로이고, −OH가 결합한 탄소가 −COOH로 바뀝니다.'}
+ {"tag": "탄화수소", "title": "프로페인", "given": "C₃H₈", "body": "이름과 분자식을 보고 프로페인의 구조식을 만드세요. 수소 원자까지 모두 연결하세요.", "answers": ["CCC"], "cf": "CH₃CH₂CH₃", "mol": ["  H H H", "  | | |", "H-C-C-C-H", "  | | |", "  H H H"], "reveal": "CH₃CH₂CH₃", "note": "탄화수소는 탄소(C)와 수소(H)로만 이루어진 탄소 화합물입니다. 탄소 원자는 4개, 수소 원자는 1개의 공유 결합을 합니다."},
+ {"tag": "알코올", "title": "메탄올", "given": "CH₄O", "body": "이름과 분자식을 보고 메탄올의 구조식을 만드세요.", "answers": ["CO"], "cf": "CH₃OH", "mol": ["  H", "  |", "H-C-O-H", "  |", "  H"], "reveal": "CH₃OH", "note": "메탄올은 하이드록시기(−OH)를 가진 알코올입니다. 분자식 CH₄O에는 −OH가 드러나지 않지만, 시성식 CH₃OH로 쓰면 작용기가 보입니다."},
+ {"tag": "알코올", "title": "에탄올", "given": "C₂H₆O", "body": "이름과 분자식을 보고 에탄올의 구조식을 만드세요.", "answers": ["CCO"], "cf": "C₂H₅OH", "mol": ["  H H", "  | |", "H-C-C-O-H", "  | |", "  H H"], "reveal": "C₂H₅OH", "note": "에탄올의 분자식은 C₂H₆O, 시성식은 C₂H₅OH입니다. 시성식은 작용기를 따로 나타낸 화학식입니다."},
+ {"tag": "알데하이드", "title": "폼알데하이드", "given": "CH₂O", "body": "이름과 분자식을 보고 폼알데하이드의 구조식을 만드세요.", "answers": ["C=O"], "cf": "HCHO", "mol": ["  O", "  I", "H-C-H"], "reveal": "HCHO", "note": "폼알데하이드는 가장 간단한 알데하이드로, 알데하이드기(−CHO)를 가집니다."},
+ {"tag": "알데하이드", "title": "아세트알데하이드", "given": "C₂H₄O", "body": "이름과 분자식을 보고 아세트알데하이드의 구조식을 만드세요.", "answers": ["CC=O"], "cf": "CH₃CHO", "mol": ["  H O", "  | I", "H-C-C-H", "  |", "  H"], "reveal": "CH₃CHO", "note": "아세트알데하이드는 알데하이드기(−CHO)를 가진 알데하이드입니다. 에탄올과 탄소 수는 같지만 작용기가 다릅니다."},
+ {"tag": "카복실산", "title": "폼산", "given": "CH₂O₂", "body": "이름과 분자식을 보고 폼산의 구조식을 만드세요.", "answers": ["C(=O)O"], "cf": "HCOOH", "mol": ["  O", "  I", "H-C-O-H"], "reveal": "HCOOH", "note": "폼산은 카복실기(−COOH)를 가진 카복실산입니다. 폼알데하이드(HCHO)와 작용기를 비교해 보세요."},
+ {"tag": "카복실산", "title": "아세트산", "given": "C₂H₄O₂", "body": "이름과 분자식을 보고 아세트산의 구조식을 만드세요.", "answers": ["CC(=O)O"], "cf": "CH₃COOH", "mol": ["  H O", "  | I", "H-C-C-O-H", "  |", "  H"], "reveal": "CH₃COOH", "note": "아세트산은 카복실기(−COOH)를 가진 카복실산으로, 식초의 주성분입니다."},
+ {"tag": "심화 · 과학 이야기", "title": "바나나 향", "given": "C₇H₁₄O₂", "body": "바나나 향을 내는 에스터의 구조식을 만드세요. 힌트: 에스터기(−COO−)를 가지며, 아세트산과 탄소 원자 5개인 알코올이 반응하여 만들어집니다.", "answers": ["CC(=O)OCCC(C)C"], "alts": [["CC(=O)OCCC(C)C"], ["CC(=O)OCCCCC"]], "cf": "CH₃COOC₅H₁₁", "mol": ["  H O   H H H H H", "  | I   | | | | |", "H-C-C-O-C-C-C-C-C-H", "  |     | | | | |", "  H     H H H H H"], "reveal": "CH₃COOC₅H₁₁", "note": "교과서 94쪽에는 CH₃COOC₅H₁₁로 나와 있습니다. −C₅H₁₁의 탄소 사슬이 곧게 이어진 구조(아세트산 펜틸)와 가지가 있는 구조(아세트산 아이소아밀) 모두 정답으로 인정합니다."},
+ {"tag": "산화", "title": "에탄올이 한 번 산화되면?", "given": "C₂H₅OH ─ 산화 → ?", "body": "에탄올이 산화되어 생성되는 물질의 구조식을 만드세요.", "answers": ["CC=O"], "mf": "C₂H₄O", "ansName": "아세트알데하이드", "cf": "CH₃CHO", "mol": ["  H O", "  | I", "H-C-C-H", "  |", "  H"], "reveal": "CH₃CHO (아세트알데하이드)", "note": "알코올이 산화되면 −OH를 가진 탄소가 −CHO를 가진 알데하이드가 됩니다."},
+ {"tag": "산화", "title": "아세트알데하이드가 산화되면?", "given": "CH₃CHO ─ 산화 → ?", "body": "아세트알데하이드가 산화되어 생성되는 물질의 구조식을 만드세요.", "answers": ["CC(=O)O"], "mf": "C₂H₄O₂", "ansName": "아세트산", "cf": "CH₃COOH", "mol": ["  H O", "  | I", "H-C-C-O-H", "  |", "  H"], "reveal": "CH₃COOH (아세트산)", "note": "알데하이드가 산화되면 −COOH를 가진 카복실산이 됩니다. 포도주가 식초가 되는 까닭입니다."},
+ {"tag": "산화", "title": "메탄올의 산화", "given": "CH₃OH ─ 산화 → (   ) ─ 산화 → (   )", "body": "괄호에 들어갈 두 물질의 구조식을 모두 만드세요.", "answers": ["C=O", "C(=O)O"], "mf": "CH₂O, CH₂O₂", "ansName": "폼알데하이드 → 폼산", "cf": "HCHO → HCOOH", "mol": ["  O       O", "  I       I", "H-C-H   H-C-O-H"], "reveal": "HCHO (폼알데하이드) → HCOOH (폼산)", "note": "메탄올도 에탄올처럼 알데하이드를 거쳐 카복실산으로 산화됩니다."},
+ {"tag": "산화", "title": "프로판올이 끝까지 산화되면?", "given": "CH₃CH₂CH₂OH ─ 산화 → ─ 산화 → ?", "body": "프로판올이 산화되어 최종적으로 생성되는 물질의 구조식을 만드세요.", "answers": ["CCC(=O)O"], "mf": "C₃H₆O₂", "ansName": "프로피온산", "cf": "C₂H₅COOH", "mol": ["  H H O", "  | | I", "H-C-C-C-O-H", "  | |", "  H H"], "reveal": "C₂H₅COOH (프로피온산)", "note": "탄소 수는 그대로이고, −OH가 결합한 탄소가 −COOH로 바뀝니다."}
 ];
 const CODES=['418','263','905','137','752','386','624','591','870','349'];
 QS.forEach((q,i)=>q.code=CODES[i]);
@@ -462,11 +469,27 @@ window.addEventListener('hashchange',route);
 const B={cls:store.get('bc','1반'),q:store.get('bq',0),groups:store.get('bg',6),scores:store.get('bs',[0,0,0,0,0,0,0,0]),reveal:false,run:false,acc:0,t0:0};
 function chipRow(el,cur,fn){el.innerHTML='';QS.forEach((_,i)=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=i+1;b.setAttribute('aria-pressed',i===cur);b.onclick=()=>fn(i);el.appendChild(b)})}
 function setBQ(i){B.q=Math.max(0,Math.min(QS.length-1,i));B.reveal=false;store.set('bq',B.q);resetTimer();renderBoard()}
+/* 정답 공개: 이름 | 분자식 | 시성식 | 구조식 (교과서 표 Ⅲ-3 형식) */
+function gridMol(rows){
+  const a=[],b=[],at=new Map();
+  rows.forEach((ln,y)=>[...ln].forEach((ch,x)=>{if(VAL[ch]&&x%2===0&&y%2===0){at.set(x+','+y,a.length);a.push([ch,x/2,y/2])}}));
+  rows.forEach((ln,y)=>[...ln].forEach((ch,x)=>{
+    const o={'-':1,'=':2,'|':1,'I':2}[ch];if(!o)return;
+    const [p,q]=(ch==='-'||ch==='=')?[(x-1)+','+y,(x+1)+','+y]:[x+','+(y-1),x+','+(y+1)];
+    if(at.has(p)&&at.has(q))b.push([at.get(p),at.get(q),o]);
+  }));
+  return{a,b};
+}
+function renderAnsRow(q){
+  const el=$('bAnsRow');if(!el)return;if(!q.mol){el.innerHTML='';return}
+  const s=structSVG(gridMol(q.mol),false);
+  el.innerHTML=`<div class="acell"><span class="eyebrow">이름</span><b>${esc(q.ansName||q.title)}</b></div><div class="acell"><span class="eyebrow">분자식</span><b class="mono">${esc(q.mf||q.given)}</b></div><div class="acell"><span class="eyebrow">시성식</span><b class="mono cf">${esc(q.cf)}</b></div><div class="acell wide"><span class="eyebrow">구조식</span><svg viewBox="${s.vb}" style="max-width:${Math.min(s.w*0.8,760)}px">${s.inner}</svg></div>`;
+}
 function renderBoard(){
   const q=QS[B.q];chipRow($('bChips'),B.q,setBQ);
   $('bNo').textContent='Q'+(B.q+1);$('bTag').textContent=q.tag;$('bTitle').textContent=q.title;
   $('bGiven').textContent=q.given;$('bBody').textContent=q.body;
-  $('bAns').hidden=!B.reveal;$('bAnsF').textContent=q.reveal;$('bAnsN').textContent=q.note||'';
+  $('bAns').hidden=!B.reveal;$('bAnsF').textContent=q.mol?'':q.reveal;renderAnsRow(q);$('bAnsN').textContent=q.note||'';
   $('bReveal').textContent=B.reveal?'정답 숨기기':'정답 공개';
   const gc=$('gCount');gc.innerHTML='';[4,5,6,7,8].forEach(n=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=n;b.setAttribute('aria-pressed',n===B.groups);b.setAttribute('aria-label','모둠 '+n+'개');b.onclick=()=>{B.groups=n;store.set('bg',n);renderBoard()};gc.appendChild(b)});
   const sc=$('scores');sc.innerHTML='';
@@ -926,7 +949,7 @@ function fbHTML(blocks,hint){
 
 /* --- 점수: 속도 점수(500~1000, 카훗 방식) × 시도 배율 --- */
 const MULT=[1,0.7,0.5,0.3];
-const defaultLimit=qi=>qi<6?120:qi<8?240:180;   /* Q1~Q6 2분, Q7·Q8(심화) 4분, Q9~Q12(산화) 3분 */
+const defaultLimit=qi=>qi<7?120:180;   /* Q1~Q7 2분, Q8(심화)·Q9~Q12(산화) 3분 */
 function pointsOf(sec,limit,attempt){
   const L=limit>0?limit:120,t=Math.max(0,Number(sec)||0);
   const speed=t<0.5?1000:Math.round(1000*(1-Math.min(t/L,1)/2));
@@ -984,10 +1007,10 @@ const PRAC=[
   {t:'H 버튼을 누른 다음, 놓인 C에서 옆 칸으로 손가락을 끌어 보세요. 수소가 결합된 채로 생겨요.',ok:()=>hasBond('C','H')},
   {t:'같은 방법으로 C의 위·아래·옆에 수소를 붙여 4개를 채우세요. C 모서리의 숫자가 사라지면 결합을 다 채운 거예요.',ok:()=>molPresent('C')},
   {t:'제출하기를 눌러 보세요.',ok:null}]},
- {title:'연습 2 · 폼알데하이드(HCHO) 만들기',ans:'C=O',steps:[
-  {t:'C를 놓고, O를 고른 다음 C에서 옆 칸으로 끌어 O를 붙이세요.',ok:()=>hasBond('C','O')},
-  {t:'C와 O 사이를 한 번 더 끌어 이어 보세요. 선이 두 줄이 되면 이중 결합이에요. (한 번 더 하면 삼중 결합, 또 하면 끊어져요)',ok:()=>hasBond('C','O',2)},
-  {t:'C에 수소 2개를 붙여 완성하세요. 실수했다면 ↶ 되돌리기를 누르세요.',ok:()=>molPresent('C=O')},
+ {title:'연습 2 · 에틸렌(C₂H₄) 만들기',ans:'C=C',steps:[
+  {t:'C를 놓고, C를 고른 상태에서 놓인 C에서 옆 칸으로 끌어 C를 하나 더 붙이세요.',ok:()=>hasBond('C','C')},
+  {t:'두 C 사이를 한 번 더 끌어 이어 보세요. 선이 두 줄이 되면 이중 결합이에요. (한 번 더 하면 삼중 결합, 또 하면 끊어져요)',ok:()=>hasBond('C','C',2)},
+  {t:'각 C에 수소 2개씩 붙여 완성하세요. 실수했다면 ↶ 되돌리기를 누르세요.',ok:()=>molPresent('C=C')},
   {t:'제출하기를 눌러 보세요.',ok:null}]}
 ];
 function needMe(){return ('name' in S)&&!S.name}
